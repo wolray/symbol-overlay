@@ -1,16 +1,16 @@
-;;; symbol-overlay.el --- Putting overlays on symbol and fast jumping in between.
+;;; symbol-overlay.el --- Putting overlays on symbol with an useful keymap.
 
 ;; Highlighting symbol and enabling you to jump from one occurrence to another
-;; and even to the definition of that symbol in the buffer, in any language,
-;; with a single key. It was originally inspired by the package
-;; 'highlight-symbol. The difference or improvement is that every symbol in
-;; 'symbol-overlay is highlighted by the emacs built-in function `overlay-put'
-;; rather than the font-lock mechanism used in 'highlight-symbol. Besides, when
-;; counting the occurrences of the symbol,'symbol-overlay needs only to simply
-;; obtain the current occurrence's index in the keywords' alist as well as the
-;; length of it where all the overlays are stored in order. While in
-;; 'highlight-symbol, this would call the function `how-many' twice, causing a
-;; perceivable delay in a large buffer.
+;; including the definition of that symbol in the buffer, with a single key
+;; strike. It was originally inspired by the package 'highlight-symbol. The
+;; difference or improvement is that every symbol in 'symbol-overlay is
+;; highlighted by the emacs built-in function `overlay-put' rather than the
+;; font-lock mechanism used in 'highlight-symbol. Besides, when counting the
+;; occurrences of the symbol,'symbol-overlay needs only to simply obtain the
+;; current occurrence's index in the keywords' alist as well as the length of it
+;; where all the overlays are stored in order. While in 'highlight-symbol, this
+;; would call the function `how-many' twice, causing a perceivable delay in a
+;; large buffer.
 
 ;; In 'symbol-overlay, the highlighting method `overlay-put' is much faster than
 ;; `font-lock-fontify-buffer', especially in a large buffer, or even a
@@ -18,7 +18,7 @@
 ;; syntax such as haskell-mode.
 
 ;; You can also jump to a symbol's definition from any occurrence using
-;; `so-jump-to-def' , as long as the syntax of the definition is specified in
+;; `so-jump-to-def', as long as the syntax of the definition is specified in
 ;; the buffer-local variable `so-def-function'.
 
 ;; More importantly, using `overlay-put' to highlight-symbol has an extra
