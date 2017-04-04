@@ -1,44 +1,49 @@
 ;;; symbol-overlay.el --- Putting overlays on symbol and fast jumping in between.
 
 ;; Highlighting symbol and enabling you to jump from one occurrence to another
-;; or even to the definition in the buffer, in any language, with a single key.
-;; It was originally inspired by the package 'highlight-symbol. The difference or
-;; improvement is that every symbol in 'symbol-overlay is highlighted by the emacs
-;; built-in function `overlay-put' rather than the font-lock mechanism used in
-;; 'highlight-symbol. Besides, when counting the occurrences of the symbol,
-;; 'symbol-overlay needs  only to simply obtain the current occurrence's index in
-;; the keywords' association list as well as the length of it where all the
-;; overlays are stored in order. While in 'highlight-symbol, this would call the
-;; function `how-many' twice, causing a perceivable delay in a large buffer.
-;;
-;; `overlay-put' is much faster than `font-lock-fontify-buffer', especially in a
-;; large buffer, or even a less-than-100-lines small buffer of major-mode with
-;; complicated keywords syntax such as haskell-mode.
-;;
+;; and even to the definition of that symbol in the buffer, in any language,
+;; with a single key. It was originally inspired by the package
+;; 'highlight-symbol. The difference or improvement is that every symbol in
+;; 'symbol-overlay is highlighted by the emacs built-in function `overlay-put'
+;; rather than the font-lock mechanism used in 'highlight-symbol. Besides, when
+;; counting the occurrences of the symbol,'symbol-overlay needs only to simply
+;; obtain the current occurrence's index in the keywords' alist as well as the
+;; length of it where all the overlays are stored in order. While in
+;; 'highlight-symbol, this would call the function `how-many' twice, causing a
+;; perceivable delay in a large buffer.
+
+;; In 'symbol-overlay, the highlighting method `overlay-put' is much faster than
+;; `font-lock-fontify-buffer', especially in a large buffer, or even a
+;; less-than-100-lines small buffer of major-mode with complicated keywords
+;; syntax such as haskell-mode.
+
 ;; You can also jump to a symbol's definition from any occurrence using
-;; `so-jump-to-def' , as long as the syntax of the definition is specified in the
-;; buffer-local variable `so-def-function'.
-;;
+;; `so-jump-to-def' , as long as the syntax of the definition is specified in
+;; the buffer-local variable `so-def-function'.
+
 ;; More importantly, using `overlay-put' to highlight-symbol has an extra
-;; advantage to enable a inside-overlay keymap for quick jump as well as other
-;; related operations by just making a single key strike.
+;; advantage to enable a inside-overlay keymap for quick jump and other related
+;; operations by just making a single key strike.
+
+;; To use 'symbol-overlay in your Emacs, you need only to bind one key:
+;; (global-set-key (kbd "M-i") 'so-put)
 
 ;;; Code:
 
 (require 'thingatpt)
 (eval-when-compile (require 'cl))
 
-(defvar so-overlay-keymap
+(defvar so-overlay-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "q") 'so-query-replace)
+    (define-key map (kbd "y") 'so-jump-to-def)
+    (define-key map (kbd "u") 'so-jump-prev)
     (define-key map (kbd "i") 'so-put)
     (define-key map (kbd "o") 'so-jump-next)
     (define-key map (kbd "p") 'so-remove-all)
-    (define-key map (kbd "q") 'so-query-replace)
-    (define-key map (kbd "u") 'so-jump-prev)
-    (define-key map (kbd "y") 'so-jump-to-def)
     map)
   "keymap automatically activated inside overlays.
-You can re-bind them to any keys you prefer.")
+You can re-bind the commands to any keys you prefer.")
 
 (defvar so-keywords)
 (make-variable-buffer-local 'so-keywords)
@@ -51,11 +56,11 @@ You can re-bind them to any keys you prefer.")
 		    "salmon"
 		    "spring green"
 		    "turquoise")
-  "Colors use for overlays' background")
+  "Colors used for overlays' background")
 
 (defvar so-def-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
-  "It must be a one-argument lambda function and returns a regexp")
+  "It must be a one-argument lambda function that returns a regexp")
 (make-variable-buffer-local 'so-def-function)
 
 (defun so-get-s (&optional str)
@@ -88,13 +93,13 @@ background color defined in `so-colors'."
 	(setq overlay (make-overlay (match-beginning 0) (match-end 0))
 	      keyword (append keyword `(,overlay)))
 	(overlay-put overlay 'face face)
-	(overlay-put overlay 'keymap so-overlay-keymap)))
+	(overlay-put overlay 'keymap so-overlay-map)))
     (push keyword so-keywords)
     color))
 
 (defun so-count-s (symbol &optional color-msg)
-  "Show the number of current occurrence of SYMBOL, if COLOR-MSG is non-nil,
-add the color used by current overlay in brackets."
+  "Show the number of occurrences of SYMBOL, if COLOR-MSG is non-nil, add the
+color used by current overlay in brackets."
   (let ((case-fold-search nil)
 	(keyword (assoc symbol so-keywords))
         overlay)
@@ -193,12 +198,14 @@ the jumping direction."
 	(message "Symbol not highlighted")))))
 
 (defun so-query-replace-s (symbol)
-  "Query replace SYMBOL with replacement inputed in a prompt."
-  (let ((replacement (read-string "Replacement: ")))
+  "Query replace SYMBOL with replacement from a prompt."
+  (let* ((replacement (read-string "Replacement: "))
+	 (defaults (cons symbol replacement)))
     (so-remove-s symbol)
     (beginning-of-thing 'symbol)
     (query-replace-regexp symbol replacement)
-    (setq query-replace-defaults `(,(cons symbol replacement)))
+    (setq query-replace-defaults
+	  (if (< emacs-major-version 25) `(,defaults) `,defaults))
     (so-put-s (so-get-s replacement))))
 
 (provide 'symbol-overlay)
