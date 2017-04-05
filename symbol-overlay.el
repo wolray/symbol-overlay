@@ -1,4 +1,4 @@
-;;; symbol-overlay.el --- Highlighting symbols with a powerful keymap
+;;; symbol-overlay.el --- Highlighting symbols with keymap-enabled overlays
 
 ;; Copyright (C) 2017 wolray
 
@@ -35,8 +35,8 @@
 ;; or even a less-than-100-lines small buffer of major-mode with complicated
 ;; keywords syntax such as haskell-mode.
 
-;; More importantly, using `overlay-put' to highlight symbols has an extra
-;; benifit to enable AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP for quick jump and
+;; More importantly, using `overlay-put' to highlight symbols has a significant
+;; benefit to enable AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP for quick jump and
 ;; other useful commands.
 
 ;; You can also jump to a symbol's definition from any occurrence by
