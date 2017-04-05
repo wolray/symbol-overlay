@@ -1,30 +1,32 @@
-;;; symbol-overlay.el --- Putting overlays on symbol with an useful keymap.
+;;; symbol-overlay.el --- Putting overlays on symbol with a powerful keymap.
 
 ;; Highlighting symbol while enabling you to jump from one occurrence to another
-;; or directly to the definition of that symbol in the buffer, with a single key
-;; strike. It was originally inspired by the package 'highlight-symbol. The
-;; difference is that every symbol in 'symbol-overlay is highlighted by the
-;; emacs built-in function `overlay-put' rather than the font-lock mechanism
-;; used in 'highlight-symbol.
-
-;; Advantages:
-;; 1. In 'symbol-overlay, `overlay-put' is much faster than traditional
-;; highligting method `font-lock-fontify-buffer', especially in a large buffer,
+;; or directly to the definition of that symbol in the buffer, with A SINGLE
+;; KEYSTROKE. It was originally inspired by the package `highlight-symbol'. The
+;; difference is that every symbol in `symbol-overlay' is highlighted by the
+;; emacs built-in function `overlay-put' rather than the `font-lock' mechanism
+;; used in `highlight-symbol'.
+;;
+;; Advantages
+;; 1. In `symbol-overlay', `overlay-put' is much faster than the traditional
+;; highligting method `font-lock-fontify-buffer', especially in a large buffer
 ;; or even a less-than-100-lines small buffer of major-mode with complicated
 ;; keywords syntax such as haskell-mode.
-;; 2. All the overlays of each symbol are stored sequentially in a alist
-;; `so-keywords-alist'. By simply obtain the current overlay's index in the
+;; 2. You can directly jump to a symbol's definition from any occurrence by
+;; using `so-jump-to-def', as long as the syntax of the definition is specified
+;; in the buffer-local variable `so-def-function'.
+;; 3. More importantly, using `overlay-put' to highlight-symbol has an extra
+;; benifit to enable AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP for quick jump and
+;; other operations.
+;; 4. All the overlays of each symbol are stored sequentially in an alist
+;; `so-keywords-alist'. By simply getting the current overlay's index in the
 ;; alist as well as the length of it, the number of occurrences can be
-;; immediately obtained. While in 'highlight-symbol, this would call the
-;; function `how-many' twice, causing unsatisfactory extra costs.
-;; 3. You can also jump to a symbol's definition from any occurrence using
-;; `so-jump-to-def', as long as the syntax of the definition is specified in the
-;; buffer-local variable `so-def-function'.
-;; 4. More importantly, using `overlay-put' to highlight-symbol has an extra
-;; benifit to enable an auto-activated inside-overlay keymap for quick jump and
-;; other related operations.
-
-;; To use 'symbol-overlay in your Emacs, you need only to bind one key:
+;; immediately obtained. While in `highlight-symbol', this would call the
+;; function `how-many' twice, causing extra costs.
+;;
+;; Usage
+;; To use `symbol-overlay' in your Emacs, you need only to bind one key:
+;; (require 'symbol-overlay)
 ;; (global-set-key (kbd "M-i") 'so-put)
 
 ;;; Code:
@@ -34,12 +36,12 @@
 
 (defvar so-overlay-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "q") 'so-query-replace)
-    (define-key map (kbd "y") 'so-jump-to-def)
-    (define-key map (kbd "u") 'so-jump-prev)
     (define-key map (kbd "i") 'so-put)
+    (define-key map (kbd "u") 'so-jump-prev)
     (define-key map (kbd "o") 'so-jump-next)
-    (define-key map (kbd "p") 'so-remove-all)
+    (define-key map (kbd "d") 'so-jump-to-def)
+    (define-key map (kbd "k") 'so-remove-all)
+    (define-key map (kbd "q") 'so-query-replace)
     map)
   "keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
@@ -59,33 +61,33 @@ You can re-bind the commands to any keys you prefer.")
 
 (defvar so-def-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
-  "It must be a one-argument lambda function that returns a regexp")
+  "It must be an one-argument lambda function that returns a regexp")
 (make-variable-buffer-local 'so-def-function)
 
 (defun so-get-s (&optional str)
   "Get the symbol at point, if none, return nil. If STR is non-nil, regexp-quote
 STR rather than the symbol."
   (let ((symbol (or str (thing-at-point 'symbol))))
-    (when symbol (concat "\\_<" (regexp-quote symbol) "\\_>"))))
-
-(defun so-get-s-error ()
-  (user-error "No symbol at point."))
+    (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
+      (user-error "No symbol at point."))))
 
 (defun so-put-s (symbol)
   "Put overlay to all occurrences of SYMBOL in the buffer, using a random
-background color defined in `so-colors'."
+background color from `so-colors'."
   (let* ((case-fold-search nil)
 	 (limit (length so-colors))
 	 (index (random limit))
 	 (indexes (mapcar 'cadr so-keywords-alist))
-	 color face keyword overlay)
-    (when (>= (length so-keywords-alist) limit) (user-error "No more color"))
-    (while (cl-find index indexes)
-      (setq index (random limit)))
-    (setq color (elt so-colors index)
+	 keyword color face overlay)
+    (if (< (length so-keywords-alist) limit)
+	(while (cl-find index indexes) (setq index (random limit)))
+      (let ((oldest-keyword (car (last so-keywords-alist))))
+	(so-remove-s (car oldest-keyword))
+	(setq index (cadr oldest-keyword))))
+    (setq keyword `(,symbol ,index)
+	  color (elt so-colors index)
 	  face `((foreground-color . "black")
-		 (background-color . ,color))
-	  keyword `(,symbol ,index))
+		 (background-color . ,color)))
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward symbol nil t)
@@ -115,7 +117,6 @@ color used by current overlay in brackets."
   (interactive)
   (unless (minibufferp)
     (let ((symbol (so-get-s)))
-      (unless symbol (so-get-s-error))
       (if (assoc symbol so-keywords-alist) (so-remove-s symbol)
 	(when (looking-at-p "\\_>") (backward-char))
 	(so-count-s symbol (so-put-s symbol))))))
@@ -169,7 +170,6 @@ nearby occurrence or the definition of the symbol. If BACK is non-nil, reverse
 the jumping direction."
   (unless (minibufferp)
     (let ((symbol (so-get-s)))
-      (unless symbol (so-get-s-error))
       (setq mark-active nil)
       (funcall jump-function symbol (if back -1 1))
       (push-mark nil t)
@@ -189,10 +189,10 @@ the jumping direction."
 
 ;;;###autoload
 (defun so-query-replace ()
+  "Command for query-replacing current symbol."
   (interactive)
   (unless (minibufferp)
     (let ((symbol (so-get-s)))
-      (unless symbol (so-get-s-error))
       (if (assoc symbol so-keywords-alist) (so-query-replace-s symbol)
 	(message "Symbol not highlighted")))))
 
@@ -204,7 +204,7 @@ the jumping direction."
     (beginning-of-thing 'symbol)
     (query-replace-regexp symbol replacement)
     (setq query-replace-defaults
-	  (if (< emacs-major-version 25) `(,defaults) `,defaults))
+	  (if (>= emacs-major-version 25) `(,defaults) `,defaults))
     (so-put-s (so-get-s replacement))))
 
 (provide 'symbol-overlay)
