@@ -4,8 +4,20 @@
 
 ;; Author: wolray <wolray@foxmail.com>
 ;; URL: https://github.com/wolray/symbol-overlay/
-;; Version: 2.0
-;; Keywords: overlay, highlight
+;; Keywords: faces, matching
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -15,7 +27,7 @@
 ;; difference is that every symbol in `symbol-overlay' is highlighted by the
 ;; Emacs built-in function `overlay-put' rather than the `font-lock' mechanism
 ;; used in `highlight-symbol'.
-;;
+
 ;; Advantages
 ;; 1. In `symbol-overlay', `overlay-put' is much faster than the traditional
 ;; highligting method `font-lock-fontify-buffer', especially in a large buffer
@@ -32,7 +44,7 @@
 ;; alist as well as the length of it, the number of occurrences can be
 ;; immediately obtained. While in `highlight-symbol', this would call the
 ;; function `how-many' twice, causing extra costs.
-;;
+
 ;; Usage
 ;; To use `symbol-overlay' in your Emacs, you need only to bind one key:
 ;; (require 'symbol-overlay)
@@ -48,8 +60,8 @@
     (define-key map (kbd "i") 'so-put)
     (define-key map (kbd "u") 'so-jump-prev)
     (define-key map (kbd "o") 'so-jump-next)
-    (define-key map (kbd "d") 'so-jump-to-def)
     (define-key map (kbd "k") 'so-remove-all)
+    (define-key map (kbd "d") 'so-jump-to-def)
     (define-key map (kbd "q") 'so-query-replace)
     map)
   "Keymap automatically activated inside overlays.

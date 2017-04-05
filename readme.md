@@ -24,11 +24,11 @@ A keymap `so-overlay-map` is already defined in the package:
 
 "o" -> `so-jump-next` : Jump to the next location of symbol at point.
 
+"k" -> `so-remove-all` : Delete all highlighted symbols in the buffer.
+
 "d" -> `so-jump-to-def` : Jump to the definition of symbol at point.
 
 "q" -> `so-query-replace` : Command for query-replacing symbol at point.
-
-"k" -> `so-remove-all` : Delete all highlighted symbols in the buffer.
 
 You can customize the keymap by writing
 
