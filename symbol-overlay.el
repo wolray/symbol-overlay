@@ -1,10 +1,19 @@
-;;; symbol-overlay.el --- Putting overlays on symbol with a powerful keymap.
+;;; symbol-overlay.el --- Putting overlays on symbol with a powerful keymap
+
+;; Copyright (C) 2017 wolray
+
+;; Author: wolray <wolray@foxmail.com>
+;; URL: https://github.com/wolray/symbol-overlay/
+;; Version: 2.0
+;; Keywords: overlay, highlight
+
+;;; Commentary:
 
 ;; Highlighting symbol while enabling you to jump from one occurrence to another
 ;; or directly to the definition of that symbol in the buffer, with A SINGLE
 ;; KEYSTROKE. It was originally inspired by the package `highlight-symbol'. The
 ;; difference is that every symbol in `symbol-overlay' is highlighted by the
-;; emacs built-in function `overlay-put' rather than the `font-lock' mechanism
+;; Emacs built-in function `overlay-put' rather than the `font-lock' mechanism
 ;; used in `highlight-symbol'.
 ;;
 ;; Advantages
@@ -43,7 +52,7 @@
     (define-key map (kbd "k") 'so-remove-all)
     (define-key map (kbd "q") 'so-query-replace)
     map)
-  "keymap automatically activated inside overlays.
+  "Keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
 
 (defvar so-keywords-alist)
@@ -57,19 +66,19 @@ You can re-bind the commands to any keys you prefer.")
 		    "salmon"
 		    "spring green"
 		    "turquoise")
-  "Colors used for overlays' background")
+  "Colors used for overlays' background.")
 
 (defvar so-def-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
-  "It must be an one-argument lambda function that returns a regexp")
+  "It must be an one-argument lambda function that returns a regexp.")
 (make-variable-buffer-local 'so-def-function)
 
 (defun so-get-s (&optional str)
-  "Get the symbol at point, if none, return nil. If STR is non-nil, regexp-quote
-STR rather than the symbol."
+  "Get the symbol at point, if none, return nil. If STR is non-nil,
+`regexp-quote' STR rather than the symbol."
   (let ((symbol (or str (thing-at-point 'symbol))))
     (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
-      (user-error "No symbol at point."))))
+      (user-error "No symbol at point"))))
 
 (defun so-put-s (symbol)
   "Put overlay to all occurrences of SYMBOL in the buffer, using a random
@@ -99,7 +108,7 @@ background color from `so-colors'."
     color))
 
 (defun so-count-s (symbol &optional color-msg)
-  "Show the number of occurrences of SYMBOL, if COLOR-MSG is non-nil, add the
+  "Show the number of occurrences of SYMBOL. If COLOR-MSG is non-nil, add the
 color used by current overlay in brackets."
   (let ((case-fold-search nil)
 	(keyword (assoc symbol so-keywords-alist))
