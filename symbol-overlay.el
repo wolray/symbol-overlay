@@ -1,4 +1,4 @@
-;;; symbol-overlay.el --- Putting overlays on symbol with a powerful keymap
+;;; symbol-overlay.el --- Highlighting symbols with a powerful keymap
 
 ;; Copyright (C) 2017 wolray
 
