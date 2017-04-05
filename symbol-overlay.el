@@ -36,8 +36,8 @@
 ;; keywords syntax such as haskell-mode.
 
 ;; More importantly, using `overlay-put' to highlight symbols has a significant
-;; benefit to enable AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP for quick jump and
-;; other useful commands.
+;; benefit to enabling AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP for quick jump
+;; and other useful commands.
 
 ;; You can also jump to a symbol's definition from any occurrence by
 ;; using `so-jump-to-def', as long as the syntax of the definition is specified
