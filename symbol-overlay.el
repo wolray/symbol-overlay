@@ -3,6 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
+;; Version: 2.0
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3"))
@@ -86,7 +87,8 @@ You can re-bind the commands to any keys you prefer.")
 				"salmon"
 				"spring green"
 				"turquoise")
-  "Colors used for overlays' background.")
+  "Colors used for overlays' background.
+You can add more colors whatever you like.")
 
 (defvar symbol-overlay-definition-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
