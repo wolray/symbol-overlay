@@ -5,6 +5,7 @@
 ;; Author: wolray <wolray@foxmail.com>
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
+;; Package-Requires: ((emacs "24.3"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -59,7 +60,7 @@
 ;;; Code:
 
 (require 'thingatpt)
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 
 (defvar so-overlay-map
   (let ((map (make-sparse-keymap)))
