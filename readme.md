@@ -1,35 +1,41 @@
 # Symbol Overlay
 
-Highlighting symbol while enabling you to jump from one occurrence to another or directly to the definition of that symbol in the buffer, with **A SINGLE KEYSTROKE**. It was originally inspired by the package `highlight-symbol`. The difference is that every symbol in `symbol-overlay` is highlighted by the emacs built-in function `overlay-put` rather than the `font-lock` mechanism used in `highlight-symbol`.
+Highlighting symbols with overlays while providing a keymap for various operations about highlighted symbols.  It was originally inspired by the package `highlight-symbol`.  The fundamental difference is that in `symbol-overlay` every symbol is highlighted by the Emacs built-in function `overlay-put` rather than the `font-lock` mechanism used in `highlight-symbol`.
 
 Advantages
 ---
-- In `symbol-overlay`, `overlay-put` is much faster than the traditional highligting method `font-lock-fontify-buffer`, especially in a large buffer or even a less-than-100-lines small buffer of major-mode with complicated keywords syntax such as haskell-mode.
-- More importantly, using `overlay-put` to highlight symbols has a significant benefit to enabling **AN AUTO-ACTIVATED OVERLAY-INSIDE KEYMAP** for quick jump and other useful commands.
-- You can also jump to a symbol's definition from any occurrence by using `symbol-overlay-jump-to-definition`, as long as the syntax of the definition is specified in the buffer-local variable `symbol-overlay-definition-function`.
-- All the overlays of each symbol are stored sequentially in an alist `symbol-overlay-keywords-alist`. By simply getting the current overlay's index in the corresponding keyword-list as well as the length of it in the alist, the number of occurrences can be immediately obtained. While in `highlight-symbol`, this would call the function `how-many` twice, causing extra costs.
+### Fast
+In `symbol-overlay`, `overlay-put` is much faster than the traditional highlighting method `font-lock` especially in a large buffer, or even a less-than-100-lines small buffer of major-mode with complicated keywords syntax, like haskell-mode.  Besides, all the overlays of each symbol are sequentially stored in an alist `symbol-overlay-keywords-alist`, from which the number of occurrences can be immediately obtained.  While in `highlight-symbol`, counting the number occurrences would call the function `how-many` twice, causing extra costs.
+### Convenient
+When highlighting symbols with overlays, **an auto-activated overlay-inside keymap** will enable you to call various useful commands with **a single keystroke**.
+### Powerful
+- Toggle overlays of all occurrences of symbol at point: `symbol-overlay-put`
+- Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all`
+- Jump between locations of symbol at point: `symbol-overlay-jump-next` & `symbol-overlay-jump-prev`
+- Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition`
+- Switch to the closest symbol highlighted nearby: `symbol-overlay-switch-forward` & `symbol-overlay-switch-backward`
+- Query replace symbol at point: `symbol-overlay-query-replace`
+- Rename symbol at point on all its occurrences: `symbol-overlay-rename`
 
 Usage
 ---
-To use `symbol-overlay` in your Emacs, you need only to bind one key:
+To use `symbol-overlay` in your Emacs, you need only to bind three keys:
 
     (require 'symbol-overlay)
-    (global-set-key (kbd "M-i") 'symbol-overlay-put)
+	(global-set-key (kbd "M-i") 'symbol-overlay-put)
+	(global-set-key (kbd "M-u") 'symbol-overlay-switch-backward)
+	(global-set-key (kbd "M-o") 'symbol-overlay-switch-forward)
 
-A keymap `symbol-overlay-map` is already defined in the package:
+Default key-bindings defined in `symbol-overlay-map`:
 
-"i" -> `symbol-overlay-put` : Toggle overlays of all occurrences of symbol at point.
+    "i" -> symbol-overlay-put
+	"u" -> symbol-overlay-jump-prev
+	"o" -> symbol-overlay-jump-next
+	"k" -> symbol-overlay-remove-all
+	"d" -> symbol-overlay-jump-to-definition
+	"q" -> symbol-overlay-query-replace
+	"n" -> symbol-overlay-rename
 
-"u" -> `symbol-overlay-jump-prev` : Jump to the previous location of symbol at point.
-
-"o" -> `symbol-overlay-jump-next` : Jump to the next location of symbol at point.
-
-"k" -> `symbol-overlay-remove-all` : Delete all highlighted symbols in the buffer.
-
-"d" -> `symbol-overlay-jump-to-definition` : Jump to the definition of symbol at point.
-
-"q" -> `symbol-overlay-query-replace` : Command for query-replacing symbol at point.
-
-You can customize the keymap by writing
+You can re-bind the commands to any keys you prefer by simply writing
 
     (define-key symbol-overlay-map (kbd "your-prefer-key") 'any-command)
