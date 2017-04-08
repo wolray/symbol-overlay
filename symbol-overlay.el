@@ -71,6 +71,7 @@
 
 (require 'thingatpt)
 (require 'cl-lib)
+(require 'seq)
 
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
@@ -185,7 +186,7 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
 
 (defun symbol-overlay-jump-call (jump-function &optional dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
-If optional argument DIR is non-nil, use it rather than the default value 1."
+If DIR is non-nil, use it rather than the default value 1."
   (unless (minibufferp)
     (let ((symbol (symbol-overlay-get-symbol)))
       (funcall jump-function symbol (or dir 1))
@@ -223,7 +224,7 @@ If optional argument DIR is non-nil, use it rather than the default value 1."
 ;;;###autoload
 (defun symbol-overlay-jump-to-definition ()
   "Jump to the definition of symbol at point.
-The definition syntax should be defined in a lambda funtion stored in
+The definition syntax should be defined in a lambda function stored in
 `symbol-overlay-definition-function' that will return the definition's regexp
 with the input symbol."
   (interactive)
@@ -241,7 +242,7 @@ with the input symbol."
 	  (when (= pt (point)) (setq p nil)))))))
 
 (defun symbol-overlay-switch-symbol (dir)
-  "Switch to the closest symbol hightlighted nearby, in the direction DIR.
+  "Switch to the closest symbol highlighted nearby, in the direction DIR.
 DIR must be 1 or -1."
   (let* ((symbol (symbol-overlay-get-symbol nil t))
 	 (keyword (symbol-overlay-assoc symbol t))
@@ -283,9 +284,10 @@ DIR must be 1 or -1."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol))
-	   (new (read-string "Replacement: "))
-	   (defaults (cons symbol new)))
+	   new defaults)
       (beginning-of-thing 'symbol)
+      (setq new (read-string "Replacement: ")
+	    defaults (cons symbol new))
       (query-replace-regexp symbol new)
       (setq query-replace-defaults
 	    (if (< emacs-major-version 25) `,defaults `(,defaults)))
