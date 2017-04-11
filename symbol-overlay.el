@@ -79,6 +79,7 @@
     (define-key map (kbd "u") 'symbol-overlay-jump-prev)
     (define-key map (kbd "o") 'symbol-overlay-jump-next)
     (define-key map (kbd "k") 'symbol-overlay-remove-all)
+    (define-key map (kbd "w") 'symbol-overlay-save-symbol)
     (define-key map (kbd "e") 'symbol-overlay-echo-mark)
     (define-key map (kbd "d") 'symbol-overlay-jump-to-definition)
     (define-key map (kbd "q") 'symbol-overlay-query-replace)
@@ -214,11 +215,27 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
     (mapc 'symbol-overlay-remove symbol-overlay-keywords-alist)))
 
 ;;;###autoload
+(defun symbol-overlay-save-symbol ()
+  "Copy symbol at point."
+  (interactive)
+  (let ((symbol (symbol-overlay-get-symbol))
+	bounds)
+    (symbol-overlay-refresh-maybe symbol)
+    (symbol-overlay-assoc symbol)
+    (setq bounds (bounds-of-thing-at-point 'symbol))
+    (kill-ring-save (car bounds) (cdr bounds))
+    (message "Current symbol saved")))
+
+;;;###autoload
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark `symbol-overlay-mark'."
   (interactive)
-  (symbol-overlay-refresh-maybe (symbol-overlay-get-symbol))
-  (and symbol-overlay-mark (goto-char symbol-overlay-mark)))
+  (let ((symbol (symbol-overlay-get-symbol)))
+    (symbol-overlay-refresh-maybe symbol)
+    (and symbol-overlay-mark (goto-char symbol-overlay-mark))
+    (setq symbol (symbol-overlay-get-symbol nil t))
+    (symbol-overlay-refresh-maybe symbol)
+    (symbol-overlay-count symbol)))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
@@ -361,7 +378,7 @@ If COUNT is non-nil, count at the end."
   (symbol-overlay-replace-call
    '(lambda (symbol new)
       (let (defaults)
-	(setq new (read-string "Replacement: " new)
+	(setq new (read-string "Replacement: ")
 	      defaults (cons symbol new))
 	(query-replace-regexp symbol new)
 	(setq query-replace-defaults
@@ -374,7 +391,7 @@ If COUNT is non-nil, count at the end."
   (interactive)
   (symbol-overlay-replace-call
    '(lambda (symbol new)
-      (setq new (read-string (format "Rename (%s): " new) new))
+      (setq new (read-string (format "Rename (%s): " new)))
       (save-excursion
 	(goto-char (point-min))
 	(while (re-search-forward symbol nil t)
