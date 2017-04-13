@@ -3,7 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
-;; Version: 2.1
+;; Version: 2.5
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3"))
@@ -32,20 +32,21 @@
 
 ;; Advantages
 
-;; In `symbol-overlay', `overlay-put' is much faster than the traditional
-;; highlighting method `font-lock' especially in a large buffer, or even a
-;; less-than-100-lines small buffer of major-mode with complicated keywords
-;; syntax,like haskell-mode.  Besides, all the overlays of each symbol are
-;; sequentially stored in an alist `symbol-overlay-keywords-alist', from which
-;; the number of occurrences can be immediately obtained.  While in
-;; `highlight-symbol', counting the number occurrences would call the function
-;; `how-many' twice, causing extra costs.
+;; When highlighting symbols in a buffer of regular size and language,
+;; `overlay-put' behaves as fast as the traditional Highlighting method
+;; `font-lock'.  However, for a buffer of major-mode with complicated keywords
+;; syntax, like haskell-mode, `font-lock' is quite slow even the buffer is less
+;; than 100 lines.  Besides, when counting the number of highlighted
+;; occurrences, `highlight-symbol' will call the function `how-many' twice,
+;; which could also result in an unpleasant delay in a large buffer.  Those
+;; problems don't exist in `symbol-overlay'.
 
-;; When highlighting symbols with overlays, **an auto-activated overlay-inside
-;; keymap** will enable you to call various useful commands with **a single
-;; keystroke**.
+;; When putting overlays on symbols, an auto-activated overlay-inside keymap
+;; will enable you to call various useful commands with a single keystroke.
 
 ;; Toggle overlays of all occurrences of symbol at point: `symbol-overlay-put'
+;; Copy symbol at point: `symbol-overlay-save-symbol'
+;; Jump back to the position before a recent jump: `symbol-overlay-echo-mark'
 ;; Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all'
 ;; Jump between locations of symbol at point: `symbol-overlay-jump-next' &
 ;; `symbol-overlay-jump-prev'
@@ -70,7 +71,6 @@
 ;;; Code:
 
 (require 'thingatpt)
-(require 'cl-lib)
 (require 'seq)
 
 (defvar symbol-overlay-map
@@ -102,19 +102,24 @@ You can re-bind the commands to any keys you prefer.")
   "Colors used for overlays' background.
 You can add more colors whatever you like.")
 
-(defvar symbol-overlay-mark nil
-  "A mark used for jumping back to the point saved befored.")
-(make-variable-buffer-local 'symbol-overlay-mark)
+(defun symbol-overlay-get-list (&optional symbol exclude)
+  "Get all highlighted overlays in the buffer.
+If SYMBOL is non-nil, get the overlays that belong to it.
+If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
+  (let ((list (overlay-lists)))
+    (seq-filter
+     '(lambda (overlay)
+	(let ((value (overlay-get overlay 'symbol)))
+	  (and value
+	       (or (not symbol)
+		   (if (string= value symbol) (not exclude) exclude)))))
+     (append (car list) (cdr list)))))
 
-(defvar symbol-overlay-tick 0
-  "A tick counter used for auto-refresh.")
-(make-variable-buffer-local 'symbol-overlay-tick)
-
-(defun symbol-overlay-get-symbol (&optional str noerror)
-  "Get the symbol at point, if none, return nil.
-If STR is non-nil, `regexp-quote' STR rather than the symbol.
-If NOERROR is non-nil, just return nil when symbol is not found."
-  (let ((symbol (or str (thing-at-point 'symbol))))
+(defun symbol-overlay-get-symbol (&optional string noerror)
+  "Get the symbol at point.
+If STRING is non-nil, `regexp-quote' STRING rather than the symbol.
+If NOERROR is non-nil, just return nil when no symbol is found."
+  (let ((symbol (or string (thing-at-point 'symbol))))
     (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
       (unless noerror (user-error "No symbol at point")))))
 
@@ -128,77 +133,59 @@ If NOERROR is non-nil, just return nil when keyword is not found."
 (defun symbol-overlay-remove (keyword)
   "Delete the KEYWORD list and all its overlays."
   (when keyword
-    (let ((index (cadr keyword)))
-      (mapc 'delete-overlay (cddr keyword))
+    (let ((symbol (car keyword)))
+      (mapc 'delete-overlay (symbol-overlay-get-list symbol))
       (setq symbol-overlay-keywords-alist
 	    (delq keyword symbol-overlay-keywords-alist))
-      index)))
+      (cdr keyword))))
 
-(defun symbol-overlay-put-overlay (symbol &optional keyword)
-  "Put overlay to all occurrences of SYMBOL in the buffer.
+(defun symbol-overlay-put-overlay (symbol color)
+  "Put overlay on current occurrence of SYMBOL after a match.
+Use COLOR as the overlay's background color."
+  (let ((overlay (make-overlay (match-beginning 0) (match-end 0)))
+	(face `((background-color . ,color)
+		(foreground-color . "black"))))
+    (overlay-put overlay 'face face)
+    (overlay-put overlay 'keymap symbol-overlay-map)
+    (overlay-put overlay 'symbol symbol)))
+
+(defun symbol-overlay-put-all (symbol &optional keyword)
+  "Put overlay on all occurrences of SYMBOL in the buffer.
 The background color is randomly picked from `symbol-overlay-colors'.
-If KEYWORD is non-nil, remove it first then use its color on new overlays."
+If KEYWORD is non-nil, remove it and use its color for new overlays."
   (let* ((case-fold-search nil)
 	 (limit (length symbol-overlay-colors))
-	 (index (or (symbol-overlay-remove keyword) (random limit)))
-	 (indexes (mapcar 'cadr symbol-overlay-keywords-alist))
-	 color face overlay p)
+	 (color (or (symbol-overlay-remove keyword)
+		    (elt symbol-overlay-colors (random limit))))
+	 (colors (mapcar 'cdr symbol-overlay-keywords-alist))
+	 p)
     (if (< (length symbol-overlay-keywords-alist) limit)
-	(while (cl-find index indexes) (setq index (random limit)))
-      (let ((the-oldest (car (last symbol-overlay-keywords-alist))))
-	(setq index (symbol-overlay-remove the-oldest))))
-    (setq keyword `(,symbol ,index)
-	  color (elt symbol-overlay-colors index)
-	  face `((foreground-color . "black")
-		 (background-color . ,color)))
+	(while (seq-position colors color)
+	  (setq color (elt symbol-overlay-colors (random limit))))
+      (setq color (symbol-overlay-remove
+		   (car (last symbol-overlay-keywords-alist)))))
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward symbol nil t)
-	(or p (setq p t))
-	(setq overlay (make-overlay (match-beginning 0) (match-end 0))
-	      keyword (append keyword `(,overlay)))
-	(overlay-put overlay 'face face)
-	(overlay-put overlay 'keymap symbol-overlay-map)))
+	(symbol-overlay-put-overlay symbol color)
+	(or p (setq p t))))
     (when p
-      (push keyword symbol-overlay-keywords-alist)
+      (push (cons symbol color) symbol-overlay-keywords-alist)
       color)))
 
 (defun symbol-overlay-count (symbol &optional color-msg)
-  "Show the number of occurrences of SYMBOL.
+  "Show the number of SYMBOL's occurrences.
 If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
-  (let* ((keyword (symbol-overlay-assoc symbol))
-	 (overlay (car (overlays-at (point))))
-	 (position (cl-position overlay keyword)))
-    (when position
-      (message (concat (substring symbol 3 -3) ": %d/%d"
-		       (and (stringp color-msg) (concat " (" color-msg ")")))
-	       (- position 1)
-	       (- (length keyword) 2)))))
-
-(defun symbol-overlay-refresh-maybe ()
-  "Refresh all overlays if necessary."
-  (let ((tick (buffer-chars-modified-tick)))
-    (unless (= symbol-overlay-tick tick)
-      (setq symbol-overlay-tick tick)
-      (mapc
-       #'(lambda (keyword)
-	   (let* ((symbol (car keyword))
-		  (overlay-list (cddr keyword))
-		  p)
-	     (save-excursion
-	       (goto-char (point-min))
-	       (while (and (not p) overlay-list)
-		 (let* ((overlay (car overlay-list))
-			(bg (overlay-start overlay))
-			(ed (overlay-end overlay)))
-		   (re-search-forward symbol nil t)
-		   (unless (and (= bg (match-beginning 0))
-				(= ed (match-end 0)))
-		     (setq p t))
-		   (setq overlay-list (cdr overlay-list))))
-	       (and (or p (re-search-forward symbol nil t))
-		    (symbol-overlay-put-overlay symbol keyword)))))
-       symbol-overlay-keywords-alist))))
+  (let ((symbol (car (symbol-overlay-assoc symbol)))
+	(pt (point))
+	list prev)
+    (setq list (symbol-overlay-get-list symbol)
+	  prev (seq-filter '(lambda (overlay) (<= (overlay-start overlay) pt))
+			   list))
+    (message (concat (substring symbol 3 -3) ": %d/%d"
+		     (and (stringp color-msg) (concat " (" color-msg ")")))
+	     (length prev)
+	     (length list))))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
@@ -207,17 +194,17 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol t)))
-      (symbol-overlay-refresh-maybe)
       (and (looking-at-p "\\_>") (backward-char))
-      (if keyword (symbol-overlay-remove keyword)
-	(symbol-overlay-count symbol (symbol-overlay-put-overlay symbol))))))
+      (or (symbol-overlay-remove keyword)
+	  (symbol-overlay-count symbol (symbol-overlay-put-all symbol))))))
 
 ;;;###autoload
 (defun symbol-overlay-remove-all ()
   "Remove all highlighted symbols in the buffer."
   (interactive)
   (unless (minibufferp)
-    (mapc 'symbol-overlay-remove symbol-overlay-keywords-alist)))
+    (mapc 'delete-overlay (symbol-overlay-get-list))
+    (setq symbol-overlay-keywords-alist nil)))
 
 ;;;###autoload
 (defun symbol-overlay-save-symbol ()
@@ -225,16 +212,18 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
   (interactive)
   (let ((symbol (symbol-overlay-get-symbol))
 	(bounds (bounds-of-thing-at-point 'symbol)))
-    (symbol-overlay-refresh-maybe)
     (kill-ring-save (car bounds) (cdr bounds))
-    (message "Current symbol saved")))
+    (message (concat "Current symbol saved"))))
+
+(defvar symbol-overlay-mark nil
+  "A mark used for jumping back to the point saved befored.")
+(make-variable-buffer-local 'symbol-overlay-mark)
 
 ;;;###autoload
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark `symbol-overlay-mark'."
   (interactive)
   (let ((symbol (symbol-overlay-get-symbol)))
-    (symbol-overlay-refresh-maybe)
     (and symbol-overlay-mark (goto-char symbol-overlay-mark))
     (symbol-overlay-count (symbol-overlay-get-symbol))))
 
@@ -243,7 +232,6 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
 DIR must be 1 or -1."
   (unless (minibufferp)
     (let ((symbol (symbol-overlay-get-symbol)))
-      (symbol-overlay-refresh-maybe)
       (setq symbol-overlay-mark (point))
       (symbol-overlay-assoc symbol)
       (funcall jump-function symbol dir)
@@ -288,16 +276,16 @@ with the input symbol."
   (interactive)
   (symbol-overlay-jump-call
    '(lambda (symbol dir)
-      (let ((p t) (pt (point)))
+      (let ((pt (point)) p)
 	(symbol-overlay-basic-jump symbol dir)
-	(while (and p (not (save-excursion
-			     (beginning-of-line)
-			     (skip-chars-forward " \t")
-			     (looking-at-p
-			      (funcall symbol-overlay-definition-function
-				       symbol)))))
+	(while (not (or p (save-excursion
+			    (beginning-of-line)
+			    (skip-chars-forward " \t")
+			    (looking-at-p
+			     (funcall symbol-overlay-definition-function
+				      symbol)))))
 	  (symbol-overlay-basic-jump symbol dir)
-	  (and (= pt (point)) (setq p nil)))))
+	  (and (= pt (point)) (setq p t)))))
    1))
 
 (defun symbol-overlay-switch-symbol (dir)
@@ -306,23 +294,17 @@ DIR must be 1 or -1."
   (unless (minibufferp)
     (let ((symbol (symbol-overlay-get-symbol nil t))
 	  (pt (point))
-	  keyword others positions)
-      (symbol-overlay-refresh-maybe)
-      (setq keyword (symbol-overlay-assoc symbol t)
-	    others (remq keyword symbol-overlay-keywords-alist)
-	    positions
-	    (apply 'append
-		   (mapcar
-		    #'(lambda (list)
-			(seq-filter '(lambda (x) (> (* dir (- x pt)) 0))
-				    (mapcar 'overlay-start list)))
-		    (mapcar 'cddr others))))
-      (unless positions
+	  list begs)
+      (setq list (symbol-overlay-get-list symbol t)
+	    begs (seq-filter
+		  '(lambda (x) (> (* dir (- x pt)) 0))
+		  (mapcar 'overlay-start list)))
+      (unless begs
 	(user-error (concat "No more "
 			    (if (> dir 0) "forward" "backward")
 			    " symbols")))
       (setq symbol-overlay-mark (point))
-      (goto-char (funcall (if (> dir 0) 'seq-min 'seq-max) positions))
+      (goto-char (funcall (if (> dir 0) 'seq-min 'seq-max) begs))
       (symbol-overlay-count (symbol-overlay-get-symbol)))))
 
 ;;;###autoload
@@ -341,18 +323,17 @@ DIR must be 1 or -1."
   "Replace symbol using REPLACE-FUNCTION.
 If COUNT is non-nil, count at the end."
   (unless (minibufferp)
-    (let* ((symbol (symbol-overlay-get-symbol))
+    (let* ((case-fold-search nil)
+	   (symbol (symbol-overlay-get-symbol))
 	   (new (substring symbol 3 -3)))
-      (symbol-overlay-refresh-maybe)
       (beginning-of-thing 'symbol)
       (setq symbol-overlay-mark (point)
 	    new (funcall replace-function symbol new))
       (symbol-overlay-remove (symbol-overlay-assoc new t))
-      (symbol-overlay-put-overlay new (symbol-overlay-assoc symbol))
+      (symbol-overlay-put-all new (symbol-overlay-assoc symbol))
       (when (string= new (symbol-overlay-get-symbol nil t))
 	(beginning-of-thing 'symbol)
-	(symbol-overlay-count new))
-      (setq symbol-overlay-tick (buffer-chars-modified-tick)))))
+	(symbol-overlay-count new)))))
 
 ;;;###autoload
 (defun symbol-overlay-query-replace ()
@@ -380,6 +361,38 @@ If COUNT is non-nil, count at the end."
 	(while (re-search-forward symbol nil t)
 	  (replace-match new)))
       (symbol-overlay-get-symbol new))))
+
+(defun symbol-overlay-refresh (beg end len)
+  "Auto refresh overlays.
+BEG, END and LEN are the beginning, end and length of changed text.
+This function is added to `after-change-functions' hook."
+  (unless (or (minibufferp) (not symbol-overlay-keywords-alist))
+    (let ((case-fold-search nil)
+	  bounds p)
+      (save-excursion
+	(goto-char end)
+	(when (setq bounds (bounds-of-thing-at-point 'symbol))
+	  (mapc #'(lambda (overlay)
+		    (and (overlay-get overlay 'symbol)
+			 (delete-overlay overlay)))
+		(overlays-at end))
+	  (setq end (cdr bounds)))
+	(goto-char beg)
+	(when (setq bounds (bounds-of-thing-at-point 'symbol))
+	  (setq beg (car bounds))
+	  (mapc #'(lambda (overlay)
+		    (and (overlay-get overlay 'symbol)
+			 (delete-overlay overlay)))
+		(overlays-at beg)))
+	(mapc
+	 #'(lambda (keyword)
+	     (let ((symbol (car keyword)))
+	       (goto-char beg)
+	       (while (re-search-forward symbol end t)
+		 (symbol-overlay-put-overlay symbol (cdr keyword)))))
+	 symbol-overlay-keywords-alist)))))
+
+(add-hook 'after-change-functions 'symbol-overlay-refresh)
 
 (provide 'symbol-overlay)
 
