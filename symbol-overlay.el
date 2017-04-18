@@ -364,7 +364,7 @@ If COUNT is non-nil, count at the end."
       (symbol-overlay-get-symbol new))))
 
 (defun symbol-overlay-refresh (beg end len)
-  "Auto refresh overlays.  Installed on `after-change-functions'.
+  "Refresh overlays.  Installed on `after-change-functions'.
 BEG, END and LEN are the beginning, end and length of changed text."
   (unless (or (minibufferp) (not symbol-overlay-keywords-alist))
     (let ((case-fold-search nil)
@@ -380,13 +380,12 @@ BEG, END and LEN are the beginning, end and length of changed text."
 		  (and (overlay-get overlay 'symbol)
 		       (delete-overlay overlay)))
 	      (overlays-in beg end))
-	(mapc
-	 #'(lambda (keyword)
-	     (let ((symbol (car keyword)))
-	       (goto-char beg)
-	       (while (re-search-forward symbol end t)
-		 (symbol-overlay-put-overlay symbol (cdr keyword)))))
-	 symbol-overlay-keywords-alist)))))
+	(mapc #'(lambda (keyword)
+		  (let ((symbol (car keyword)))
+		    (goto-char beg)
+		    (while (re-search-forward symbol end t)
+		      (symbol-overlay-put-overlay symbol (cdr keyword)))))
+	      symbol-overlay-keywords-alist)))))
 
 (add-hook 'after-change-functions 'symbol-overlay-refresh)
 
