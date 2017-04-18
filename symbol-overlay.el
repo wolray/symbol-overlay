@@ -364,27 +364,22 @@ If COUNT is non-nil, count at the end."
       (symbol-overlay-get-symbol new))))
 
 (defun symbol-overlay-refresh (beg end len)
-  "Auto refresh overlays.
-BEG, END and LEN are the beginning, end and length of changed text.
-This function is added to `after-change-functions' hook."
+  "Auto refresh overlays.  Installed on `after-change-functions'.
+BEG, END and LEN are the beginning, end and length of changed text."
   (unless (or (minibufferp) (not symbol-overlay-keywords-alist))
     (let ((case-fold-search nil)
-	  bounds)
+	  (re "\\(\\sw\\|\\s_\\)+"))
       (save-excursion
 	(goto-char end)
-	(when (setq bounds (bounds-of-thing-at-point 'symbol))
-	  (mapc #'(lambda (overlay)
-		    (and (overlay-get overlay 'symbol)
-			 (delete-overlay overlay)))
-		(overlays-at end))
-	  (setq end (cdr bounds)))
+	(and (looking-at-p re)
+	     (setq end (or (re-search-forward "\\_>" nil t) end)))
 	(goto-char beg)
-	(when (setq bounds (bounds-of-thing-at-point 'symbol))
-	  (setq beg (car bounds))
-	  (mapc #'(lambda (overlay)
-		    (and (overlay-get overlay 'symbol)
-			 (delete-overlay overlay)))
-		(overlays-at beg)))
+	(and (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
+	     (setq beg (or (re-search-backward "\\_<" nil t) beg)))
+	(mapc #'(lambda (overlay)
+		  (and (overlay-get overlay 'symbol)
+		       (delete-overlay overlay)))
+	      (overlays-in beg end))
 	(mapc
 	 #'(lambda (keyword)
 	     (let ((symbol (car keyword)))
