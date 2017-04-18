@@ -24,7 +24,7 @@ When putting overlays on symbols, **an auto-activated overlay-inside keymap** wi
 
 ### Powerful
 
-- Toggle overlays of all occurrences of symbol at point: `symbol-overlay-put`
+- Toggle all overlays of symbol at point: `symbol-overlay-put`
 - Copy symbol at point: `symbol-overlay-save-symbol`
 - Jump back to the position before a recent jump: `symbol-overlay-echo-mark`
 - Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all`

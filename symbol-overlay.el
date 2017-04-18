@@ -44,7 +44,7 @@
 ;; When putting overlays on symbols, an auto-activated overlay-inside keymap
 ;; will enable you to call various useful commands with a single keystroke.
 
-;; Toggle overlays of all occurrences of symbol at point: `symbol-overlay-put'
+;; Toggle all overlays of symbol at point: `symbol-overlay-put'
 ;; Copy symbol at point: `symbol-overlay-save-symbol'
 ;; Jump back to the position before a recent jump: `symbol-overlay-echo-mark'
 ;; Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all'
@@ -147,6 +147,7 @@ Use COLOR as the overlay's background color."
 		(foreground-color . "black"))))
     (overlay-put overlay 'face face)
     (overlay-put overlay 'keymap symbol-overlay-map)
+    (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'symbol symbol)))
 
 (defun symbol-overlay-put-all (symbol &optional keyword)
@@ -189,7 +190,7 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
 
 ;;;###autoload
 (defun symbol-overlay-put ()
-  "Toggle overlays of all occurrences of symbol at point."
+  "Toggle all overlays of symbol at point."
   (interactive)
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
@@ -368,7 +369,7 @@ BEG, END and LEN are the beginning, end and length of changed text.
 This function is added to `after-change-functions' hook."
   (unless (or (minibufferp) (not symbol-overlay-keywords-alist))
     (let ((case-fold-search nil)
-	  bounds p)
+	  bounds)
       (save-excursion
 	(goto-char end)
 	(when (setq bounds (bounds-of-thing-at-point 'symbol))
