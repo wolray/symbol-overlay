@@ -9,9 +9,13 @@ Highlight symbols with overlays while providing a keymap for various operations 
 What's New!
 ---
 
+### 20170420:
+
+Toggling overlays to be showed in buffer or only in scope is now enabled.  When symbol is highlighted in scope, all related operations is narrowed to the scope, too. Try `symbol-overlay-toggle-in-scope` via "t".  This feature is applicable only for languages that support the lisp function `narrow-to-defun`.
+
 ### 20170417:
 
-Auto-refresh is now enabled in the package. Every time the highlighted text is changed or a new occurrence shows up, the buffer will refresh automatically.
+Auto-refresh is now enabled. Every time the highlighted text is changed or a new occurrence shows up, the buffer will refresh automatically.
 
 Two new commands added: `symbol-overlay-save-symbol` for copying the current symbol, `symbol-overlay-echo-mark` for undoing a recent jump.
 
@@ -35,6 +39,7 @@ When putting overlays on symbols, **an auto-activated overlay-inside keymap** wi
 - Jump between locations of symbol at point: `symbol-overlay-jump-next` & `symbol-overlay-jump-prev`
 - Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition`
 - Switch to the closest symbol highlighted nearby: `symbol-overlay-switch-forward` & `symbol-overlay-switch-backward`
+- Toggle overlays to be showed in buffer or only in scope: `symbol-overlay-toggle-in-scope`
 - Query replace symbol at point: `symbol-overlay-query-replace`
 - Rename symbol at point on all its occurrences: `symbol-overlay-rename`
 

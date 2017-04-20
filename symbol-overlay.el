@@ -53,6 +53,8 @@
 ;; Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition'
 ;; Switch to the closest symbol highlighted nearby:
 ;; `symbol-overlay-switch-forward' & `symbol-overlay-switch-backward'
+;; Toggle overlays to be showed in buffer or only in scope:
+;; `symbol-overlay-toggle-in-scope'
 ;; Query replace symbol at point: `symbol-overlay-query-replace'
 ;; Rename symbol at point on all its occurrences: `symbol-overlay-rename'
 
@@ -82,6 +84,7 @@
     (define-key map (kbd "w") 'symbol-overlay-save-symbol)
     (define-key map (kbd "e") 'symbol-overlay-echo-mark)
     (define-key map (kbd "d") 'symbol-overlay-jump-to-definition)
+    (define-key map (kbd "t") 'symbol-overlay-toggle-in-scope)
     (define-key map (kbd "q") 'symbol-overlay-query-replace)
     (define-key map (kbd "SPC") 'symbol-overlay-rename)
     map)
@@ -137,7 +140,7 @@ If NOERROR is non-nil, just return nil when keyword is not found."
       (mapc 'delete-overlay (symbol-overlay-get-list symbol))
       (setq symbol-overlay-keywords-alist
 	    (delq keyword symbol-overlay-keywords-alist))
-      (cdr keyword))))
+      (cadr keyword))))
 
 (defun symbol-overlay-put-overlay (symbol color)
   "Put overlay on current occurrence of SYMBOL after a match.
@@ -150,15 +153,16 @@ Use COLOR as the overlay's background color."
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'symbol symbol)))
 
-(defun symbol-overlay-put-all (symbol &optional keyword)
-  "Put overlay on all occurrences of SYMBOL in the buffer.
+(defun symbol-overlay-put-all (symbol &optional keyword scope)
+  "Put overlays on all occurrences of SYMBOL in the buffer.
 The background color is randomly picked from `symbol-overlay-colors'.
-If KEYWORD is non-nil, remove it and use its color for new overlays."
+If KEYWORD is non-nil, remove it and use its color for new overlays.
+If SCOPE is non-nil, put overlays only on occurrences in scope."
   (let* ((case-fold-search nil)
 	 (limit (length symbol-overlay-colors))
 	 (color (or (symbol-overlay-remove keyword)
 		    (elt symbol-overlay-colors (random limit))))
-	 (colors (mapcar 'cdr symbol-overlay-keywords-alist))
+	 (colors (mapcar 'cadr symbol-overlay-keywords-alist))
 	 p)
     (if (< (length symbol-overlay-keywords-alist) limit)
 	(while (seq-position colors color)
@@ -166,25 +170,28 @@ If KEYWORD is non-nil, remove it and use its color for new overlays."
       (setq color (symbol-overlay-remove
 		   (car (last symbol-overlay-keywords-alist)))))
     (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward symbol nil t)
-	(symbol-overlay-put-overlay symbol color)
-	(or p (setq p t))))
+      (save-restriction
+	(and scope (narrow-to-defun))
+	(goto-char (point-min))
+	(while (re-search-forward symbol nil t)
+	  (symbol-overlay-put-overlay symbol color)
+	  (or p (setq p t)))))
     (when p
-      (push (cons symbol color) symbol-overlay-keywords-alist)
+      (push `(,symbol ,color . ,scope) symbol-overlay-keywords-alist)
       color)))
 
-(defun symbol-overlay-count (symbol &optional color-msg)
+(defun symbol-overlay-count (symbol &optional scope color)
   "Show the number of SYMBOL's occurrences.
-If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
-  (let ((symbol (car (symbol-overlay-assoc symbol)))
-	(pt (point))
+If SCOPE is non-nil, add a message.
+If COLOR is non-nil, add the color used by current overlay."
+  (let ((pt (point))
 	list prev)
     (setq list (symbol-overlay-get-list symbol)
 	  prev (seq-filter '(lambda (overlay) (<= (overlay-start overlay) pt))
 			   list))
     (message (concat (substring symbol 3 -3) ": %d/%d"
-		     (and (stringp color-msg) (concat " (" color-msg ")")))
+		     (and scope " in scope")
+		     (and color (format " (%s)" color)))
 	     (length prev)
 	     (length list))))
 
@@ -197,7 +204,27 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
 	   (keyword (symbol-overlay-assoc symbol t)))
       (and (looking-at-p "\\_>") (backward-char))
       (or (symbol-overlay-remove keyword)
-	  (symbol-overlay-count symbol (symbol-overlay-put-all symbol))))))
+	  (symbol-overlay-count symbol nil (symbol-overlay-put-all symbol))))))
+
+;;;###autoload
+(defun symbol-overlay-toggle-in-scope ()
+  "Toggle overlays to be showed in buffer or only in scope."
+  (interactive)
+  (unless (minibufferp)
+    (let* ((symbol (symbol-overlay-get-symbol))
+	   (keyword (symbol-overlay-assoc symbol))
+	   (scope (cddr keyword))
+	   (pt (point))
+	   toggle)
+      (save-excursion
+	(save-restriction
+	  (if keyword
+	      (and (setq scope (not scope))
+		   (narrow-to-defun))
+	    (and scope (narrow-to-defun)))
+	  (or (= pt (point)) (user-error "Wrong scope"))
+	  (message "%s" (symbol-overlay-put-all symbol keyword scope))
+	  (symbol-overlay-count symbol scope))))))
 
 ;;;###autoload
 (defun symbol-overlay-remove-all ()
@@ -224,19 +251,21 @@ If COLOR-MSG is non-nil, add the color used by current overlay in brackets."
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark `symbol-overlay-mark'."
   (interactive)
-  (let ((symbol (symbol-overlay-get-symbol)))
-    (and symbol-overlay-mark (goto-char symbol-overlay-mark))
-    (symbol-overlay-count (symbol-overlay-get-symbol))))
+  (and symbol-overlay-mark (goto-char symbol-overlay-mark)))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
 DIR must be 1 or -1."
   (unless (minibufferp)
-    (let ((symbol (symbol-overlay-get-symbol)))
+    (let* ((symbol (symbol-overlay-get-symbol))
+	   (keyword (symbol-overlay-assoc symbol))
+	   (scope (cddr keyword)))
       (setq symbol-overlay-mark (point))
       (symbol-overlay-assoc symbol)
-      (funcall jump-function symbol dir)
-      (symbol-overlay-count symbol))))
+      (save-restriction
+	(and scope (narrow-to-defun))
+	(funcall jump-function symbol dir)
+	(symbol-overlay-count symbol scope)))))
 
 (defun symbol-overlay-basic-jump (symbol dir)
   "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
@@ -306,7 +335,8 @@ DIR must be 1 or -1."
 			    " symbols")))
       (setq symbol-overlay-mark (point))
       (goto-char (funcall (if (> dir 0) 'seq-min 'seq-max) begs))
-      (symbol-overlay-count (symbol-overlay-get-symbol)))))
+      (setq symbol (symbol-overlay-get-symbol))
+      (symbol-overlay-count symbol (cddr (symbol-overlay-assoc symbol))))))
 
 ;;;###autoload
 (defun symbol-overlay-switch-forward ()
@@ -327,26 +357,32 @@ If COUNT is non-nil, count at the end."
     (let* ((case-fold-search nil)
 	   (inhibit-modification-hooks t)
 	   (symbol (symbol-overlay-get-symbol))
+	   (keyword (symbol-overlay-assoc symbol))
+	   (scope (cddr keyword))
 	   (new (substring symbol 3 -3)))
       (beginning-of-thing 'symbol)
       (setq symbol-overlay-mark (point)
-	    new (funcall replace-function symbol new))
+	    new (funcall replace-function symbol new scope))
       (symbol-overlay-remove (symbol-overlay-assoc new t))
-      (symbol-overlay-put-all new (symbol-overlay-assoc symbol))
+      (symbol-overlay-put-all new (symbol-overlay-assoc symbol) scope)
       (when (string= new (symbol-overlay-get-symbol nil t))
 	(beginning-of-thing 'symbol)
-	(symbol-overlay-count new)))))
+	(symbol-overlay-count new scope)))))
 
 ;;;###autoload
 (defun symbol-overlay-query-replace ()
   "Query replace symbol at point."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (symbol new)
+   '(lambda (symbol new scope)
       (let (defaults)
-	(setq new (read-string "Replacement: ")
+	(setq new (read-string (concat "Replacement"
+				       (and scope " in scope")
+				       ": "))
 	      defaults (cons symbol new))
-	(query-replace-regexp symbol new)
+	(save-restriction
+	  (and scope (narrow-to-defun))
+	  (query-replace-regexp symbol new))
 	(setq query-replace-defaults
 	      (if (< emacs-major-version 25) `,defaults `(,defaults)))
 	(symbol-overlay-get-symbol new)))))
@@ -356,11 +392,15 @@ If COUNT is non-nil, count at the end."
   "Rename symbol at point on all its occurrences."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (symbol new)
-      (setq new (read-string (format "Rename (%s): " new)))
+   '(lambda (symbol new scope)
+      (setq new (read-string (concat (format "Rename (%s)" new)
+				     (and scope " in scope")
+				     ": ")))
       (save-excursion
-	(goto-char (point-min))
-	(while (re-search-forward symbol nil t) (replace-match new)))
+	(save-restriction
+	  (and scope (narrow-to-defun))
+	  (goto-char (point-min))
+	  (while (re-search-forward symbol nil t) (replace-match new))))
       (symbol-overlay-get-symbol new))))
 
 (defun symbol-overlay-refresh (beg end len)
@@ -383,7 +423,7 @@ BEG, END and LEN are the beginning, end and length of changed text."
 		  (let ((symbol (car keyword)))
 		    (goto-char beg)
 		    (while (re-search-forward symbol end t)
-		      (symbol-overlay-put-overlay symbol (cdr keyword)))))
+		      (symbol-overlay-put-overlay symbol (cadr keyword)))))
 	      symbol-overlay-keywords-alist)))))
 
 (add-hook 'after-change-functions 'symbol-overlay-refresh)
