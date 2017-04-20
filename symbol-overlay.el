@@ -1,4 +1,4 @@
-;;; symbol-overlay.el --- Highlighting symbols with keymap-enabled overlays
+;;; symbol-overlay.el --- Highlight symbols with keymap-enabled overlays
 
 ;; Copyright (C) 2017 wolray
 
@@ -360,8 +360,7 @@ If COUNT is non-nil, count at the end."
       (setq new (read-string (format "Rename (%s): " new)))
       (save-excursion
 	(goto-char (point-min))
-	(while (re-search-forward symbol nil t)
-	  (replace-match new)))
+	(while (re-search-forward symbol nil t) (replace-match new)))
       (symbol-overlay-get-symbol new))))
 
 (defun symbol-overlay-refresh (beg end len)
@@ -373,13 +372,12 @@ BEG, END and LEN are the beginning, end and length of changed text."
       (save-excursion
 	(goto-char end)
 	(and (looking-at-p re)
-	     (setq end (or (re-search-forward "\\_>" nil t) end)))
+	     (setq end (re-search-forward "\\_>")))
 	(goto-char beg)
 	(and (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
-	     (setq beg (or (re-search-backward "\\_<" nil t) beg)))
+	     (setq beg (re-search-backward "\\_<")))
 	(mapc #'(lambda (overlay)
-		  (and (overlay-get overlay 'symbol)
-		       (delete-overlay overlay)))
+		  (and (overlay-get overlay 'symbol) (delete-overlay overlay)))
 	      (overlays-in beg end))
 	(mapc #'(lambda (keyword)
 		  (let ((symbol (car keyword)))
