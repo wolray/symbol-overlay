@@ -62,6 +62,7 @@ Default key-bindings defined in `symbol-overlay-map`:
     "w" -> symbol-overlay-save-symbol
     "e" -> symbol-overlay-echo-mark
 	"d" -> symbol-overlay-jump-to-definition
+	"t" -> symbol-overlay-toggle-in-scope
 	"q" -> symbol-overlay-query-replace
 	"SPC" -> symbol-overlay-rename
 
