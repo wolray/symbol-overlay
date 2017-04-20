@@ -1,7 +1,7 @@
 # Symbol Overlay
 
 <p align="center">
-  ![](https://github.com/wolray/symbol-overlay/blob/master/screenshot.png)
+  <img src="screenshot.png">
 </p>
 
 Highlight symbols with overlays while providing a keymap for various operations about highlighted symbols.  It was originally inspired by the package `highlight-symbol`.  The fundamental difference is that in `symbol-overlay` every symbol is highlighted by the Emacs built-in function `overlay-put` rather than the `font-lock` mechanism used in `highlight-symbol`.
