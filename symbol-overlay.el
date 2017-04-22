@@ -3,7 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
-;; Version: 3.1
+;; Version: 3.2
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3"))
@@ -105,18 +105,20 @@ You can re-bind the commands to any keys you prefer.")
   "Colors used for overlays' background.
 You can add more colors whatever you like.")
 
-(defun symbol-overlay-get-list (&optional symbol exclude)
+(defun symbol-overlay-get-list (&optional symbol car-or-cdr exclude)
   "Get all highlighted overlays in the buffer.
 If SYMBOL is non-nil, get the overlays that belong to it.
+CAR-OR-CDR must a symbol whose value is 'car or 'cdr, if not nil.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
-  (let ((list (overlay-lists)))
+  (let ((lists (or (overlay-recenter (point)) (overlay-lists))))
     (seq-filter
      '(lambda (overlay)
 	(let ((value (overlay-get overlay 'symbol)))
 	  (and value
 	       (or (not symbol)
 		   (if (string= value symbol) (not exclude) exclude)))))
-     (append (car list) (cdr list)))))
+     (if car-or-cdr (funcall car-or-cdr lists)
+       (append (car lists) (cdr lists))))))
 
 (defun symbol-overlay-get-symbol (&optional string noerror)
   "Get the symbol at point.
@@ -199,17 +201,15 @@ If KEYWORD is non-nil, remove it and use its color for new overlays."
   "Show the number of KEYWORD's occurrences.
 If SCOPE is non-nil, display an \"in scope\" message.
 If SHOW-COLOR is non-nil, display the color used by current overlay."
-  (let ((symbol (car keyword))
-	(pt (point))
-	list prev)
-    (setq list (symbol-overlay-get-list symbol)
-	  prev (seq-filter '(lambda (overlay) (<= (overlay-start overlay) pt))
-			   list))
+  (let* ((symbol (car keyword))
+	 (before (symbol-overlay-get-list symbol 'car))
+	 (after (symbol-overlay-get-list symbol 'cdr))
+	 (count (length before)))
     (message (concat (substring symbol 3 -3) ": %d/%d"
 		     (and (cadr keyword) " in scope")
 		     (and show-color (format " (%s)" (cddr keyword))))
-	     (length prev)
-	     (length list))))
+	     (+ count 1)
+	     (+ count (length after)))))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
@@ -218,8 +218,8 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
   (unless (minibufferp)
     (let ((symbol (symbol-overlay-get-symbol)))
       (or (symbol-overlay-remove (symbol-overlay-assoc symbol t))
-	  (symbol-overlay-count (symbol-overlay-put-all symbol) t))
-      (and (looking-at-p "\\_>") (backward-char)))))
+	  (and (looking-at-p "\\_>") (backward-char))
+	  (symbol-overlay-count (symbol-overlay-put-all symbol) t)))))
 
 ;;;###autoload
 (defun symbol-overlay-toggle-in-scope ()
@@ -331,19 +331,14 @@ with the input symbol."
   "Switch to the closest symbol highlighted nearby, in the direction DIR.
 DIR must be 1 or -1."
   (unless (minibufferp)
-    (let ((symbol (symbol-overlay-get-symbol nil t))
-	  (pt (point))
-	  list begs)
-      (setq list (symbol-overlay-get-list symbol t)
-	    begs (seq-filter
-		  '(lambda (x) (> (* dir (- x pt)) 0))
-		  (mapcar 'overlay-start list)))
-      (unless begs
+    (let* ((symbol (symbol-overlay-get-symbol nil t))
+	   (list (symbol-overlay-get-list symbol (if (> dir 0) 'cdr 'car) t)))
+      (unless list
 	(user-error (concat "No more "
 			    (if (> dir 0) "forward" "backward")
 			    " symbols")))
       (setq symbol-overlay-mark (point))
-      (goto-char (funcall (if (> dir 0) 'seq-min 'seq-max) begs))
+      (goto-char (overlay-start (car list)))
       (symbol-overlay-count
        (symbol-overlay-assoc (symbol-overlay-get-symbol))))))
 
@@ -364,7 +359,6 @@ DIR must be 1 or -1."
 If COUNT is non-nil, count at the end."
   (unless (minibufferp)
     (let* ((case-fold-search nil)
-	   (inhibit-modification-hooks t)
 	   (symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol))
 	   (scope (cadr keyword))
@@ -386,14 +380,14 @@ If COUNT is non-nil, count at the end."
   (interactive)
   (symbol-overlay-replace-call
    '(lambda (symbol new scope)
-      (let (defaults)
-	(and scope (user-error "Query replace is invalid in scope"))
-	(setq new (read-string "Replacement: ")
-	      defaults (cons symbol new))
+      (and scope (user-error "Query replace is invalid in scope"))
+      (setq new (read-string "Replacement: "))
+      (let ((inhibit-modification-hooks t)
+	    (defaults (cons symbol new)))
 	(query-replace-regexp symbol new)
 	(setq query-replace-defaults
-	      (if (< emacs-major-version 25) `,defaults `(,defaults)))
-	(symbol-overlay-get-symbol new)))))
+	      (if (< emacs-major-version 25) `,defaults `(,defaults))))
+      (symbol-overlay-get-symbol new))))
 
 ;;;###autoload
 (defun symbol-overlay-rename ()
@@ -408,7 +402,8 @@ If COUNT is non-nil, count at the end."
 	(save-restriction
 	  (symbol-overlay-narrow scope)
 	  (goto-char (point-min))
-	  (while (re-search-forward symbol nil t) (replace-match new))))
+	  (let ((inhibit-modification-hooks t))
+	    (while (re-search-forward symbol nil t) (replace-match new)))))
       (symbol-overlay-get-symbol new))))
 
 (defun symbol-overlay-refresh (beg end len)
