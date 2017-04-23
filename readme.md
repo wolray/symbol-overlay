@@ -33,13 +33,14 @@ When putting overlays on symbols, **an auto-activated overlay-inside keymap** wi
 ### Powerful
 
 - Toggle all overlays of symbol at point: `symbol-overlay-put`
-- Copy symbol at point: `symbol-overlay-save-symbol`
-- Jump back to the position before a recent jump: `symbol-overlay-echo-mark`
-- Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all`
 - Jump between locations of symbol at point: `symbol-overlay-jump-next` & `symbol-overlay-jump-prev`
-- Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition`
 - Switch to the closest symbol highlighted nearby: `symbol-overlay-switch-forward` & `symbol-overlay-switch-backward`
+- Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all`
+- Copy symbol at point: `symbol-overlay-save-symbol`
 - Toggle overlays to be showed in buffer or only in scope: `symbol-overlay-toggle-in-scope`
+- Jump back to the position before a recent jump: `symbol-overlay-echo-mark`
+- Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition`
+- Isearch symbol at point literally, without `regexp-quote` the symbol: `symbol-overlay-isearch-literally`
 - Query replace symbol at point: `symbol-overlay-query-replace`
 - Rename symbol at point on all its occurrences: `symbol-overlay-rename`
 
