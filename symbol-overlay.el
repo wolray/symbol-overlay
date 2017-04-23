@@ -153,7 +153,7 @@ If NOERROR is non-nil, just return nil when keyword is not found."
 (defun symbol-overlay-narrow (scope)
   "Narrow to a specific region when SCOPE is non-nil.
 Use default method `narrow-to-defun' or
-`symbol-overlay-narrow-function' if defined."
+`symbol-overlay-narrow-function' if specified."
   (when scope
     (let ((f symbol-overlay-narrow-function)
 	  region)
@@ -407,13 +407,13 @@ DIR must be 1 or -1."
    '(lambda (symbol scope)
       (let ((new (read-string (concat "Rename"
 				      (and scope " in scope")
-				      ": "))))
+				      ": ")))
+	    (inhibit-modification-hooks t))
 	(save-excursion
 	  (save-restriction
 	    (symbol-overlay-narrow scope)
 	    (goto-char (point-min))
-	    (let ((inhibit-modification-hooks t))
-	      (while (re-search-forward symbol nil t) (replace-match new)))))
+	    (while (re-search-forward symbol nil t) (replace-match new))))
 	(symbol-overlay-get-symbol new)))))
 
 (defun symbol-overlay-refresh (beg end len)
