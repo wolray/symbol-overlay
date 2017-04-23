@@ -199,7 +199,6 @@ If KEYWORD is non-nil, remove it and use its color for new overlays."
 
 (defun symbol-overlay-count (keyword &optional show-color)
   "Show the number of KEYWORD's occurrences.
-If SCOPE is non-nil, display an \"in scope\" message.
 If SHOW-COLOR is non-nil, display the color used by current overlay."
   (let* ((symbol (car keyword))
 	 (before (symbol-overlay-get-list symbol 'car))
@@ -355,8 +354,7 @@ DIR must be 1 or -1."
   (symbol-overlay-switch-symbol -1))
 
 (defun symbol-overlay-replace-call (replace-function)
-  "Replace symbol using REPLACE-FUNCTION.
-If COUNT is non-nil, count at the end."
+  "Replace symbol using REPLACE-FUNCTION."
   (unless (minibufferp)
     (let* ((case-fold-search nil)
 	   (symbol (symbol-overlay-get-symbol))
@@ -413,21 +411,23 @@ BEG, END and LEN are the beginning, end and length of changed text."
     (let ((case-fold-search nil)
 	  (re "\\(\\sw\\|\\s_\\)+"))
       (save-excursion
-	(goto-char end)
-	(and (looking-at-p re)
-	     (setq end (re-search-forward "\\_>")))
-	(goto-char beg)
-	(and (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
-	     (setq beg (re-search-backward "\\_<")))
-	(mapc #'(lambda (overlay)
-		  (and (overlay-get overlay 'symbol) (delete-overlay overlay)))
-	      (overlays-in beg end))
-	(mapc #'(lambda (keyword)
-		  (let ((symbol (car keyword)))
-		    (goto-char beg)
-		    (while (re-search-forward symbol end t)
-		      (symbol-overlay-put-one symbol (cddr keyword)))))
-	      symbol-overlay-keywords-alist)))))
+	(save-match-data
+	  (goto-char end)
+	  (and (looking-at-p re)
+	       (setq end (re-search-forward "\\_>")))
+	  (goto-char beg)
+	  (and (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
+	       (setq beg (re-search-backward "\\_<")))
+	  (mapc #'(lambda (overlay)
+		    (and (overlay-get overlay 'symbol)
+			 (delete-overlay overlay)))
+		(overlays-in beg end))
+	  (mapc #'(lambda (keyword)
+		    (let ((symbol (car keyword)))
+		      (goto-char beg)
+		      (while (re-search-forward symbol end t)
+			(symbol-overlay-put-one symbol (cddr keyword)))))
+		symbol-overlay-keywords-alist))))))
 
 (add-hook 'after-change-functions 'symbol-overlay-refresh)
 
