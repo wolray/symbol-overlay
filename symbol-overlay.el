@@ -264,7 +264,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark `symbol-overlay-mark'."
   (interactive)
-  (and symbol-overlay-mark (goto-char symbol-overlay-mark)))
+  (and (not (minibufferp)) symbol-overlay-mark (goto-char symbol-overlay-mark)))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
@@ -359,11 +359,12 @@ DIR must be 1 or -1."
 (defun symbol-overlay-isearch-literally ()
   "Isearch symbol at point literally, without `regexp-quote' the symbol."
   (interactive)
-  (let ((symbol (symbol-overlay-get-symbol))
-	(beg (match-beginning 0)))
-    (goto-char beg)
-    (isearch-forward nil t)
-    (isearch-yank-string (substring symbol 3 -3))))
+  (unless (minibufferp)
+    (let ((symbol (symbol-overlay-get-symbol))
+	  (beg (match-beginning 0)))
+      (goto-char beg)
+      (isearch-forward nil t)
+      (isearch-yank-string (substring symbol 3 -3)))))
 
 (defun symbol-overlay-replace-call (replace-function)
   "Replace symbol using REPLACE-FUNCTION."
