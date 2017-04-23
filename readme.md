@@ -9,6 +9,10 @@ Highlight symbols with overlays while providing a keymap for various operations 
 What's New!
 ---
 
+### 20170423:
+
+Toggling to isearch-mode is now enabled. Try `symbol-overlay-isearch-literally` via "s" to search the not-quoted symbol in isearch-mode.
+
 ### 20170420:
 
 Toggling overlays to be showed in buffer or only in scope is now enabled.  When symbol is highlighted in scope, all related operations is narrowed to the scope, too. Try `symbol-overlay-toggle-in-scope` via "t".  This feature is applicable only for languages that support the lisp function `narrow-to-defun`.
