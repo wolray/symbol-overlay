@@ -152,8 +152,8 @@ If NOERROR is non-nil, just return nil when keyword is not found."
 
 (defun symbol-overlay-narrow (scope)
   "Narrow to a specific region when SCOPE is non-nil.
-Use default method `narrow-to-defun' or
-`symbol-overlay-narrow-function' if specified."
+Use default method `narrow-to-defun' or `symbol-overlay-narrow-function'
+if specified."
   (when scope
     (let ((f symbol-overlay-narrow-function)
 	  region)
@@ -176,11 +176,10 @@ Use COLOR as the overlay's background color."
   "Put overlays on all occurrences of SYMBOL in the buffer.
 The background color is randomly picked from `symbol-overlay-colors'.
 If SCOPE is non-nil, put overlays only on occurrences in scope.
-If KEYWORD is non-nil, remove it and use its color for new overlays."
+If KEYWORD is non-nil, use its color on new overlays."
   (let* ((case-fold-search nil)
 	 (limit (length symbol-overlay-colors))
-	 (color (or (symbol-overlay-remove keyword)
-		    (elt symbol-overlay-colors (random limit))))
+	 (color (or (cddr keyword) (elt symbol-overlay-colors (random limit))))
 	 (colors (mapcar 'cddr symbol-overlay-keywords-alist))
 	 p)
     (if (< (length symbol-overlay-keywords-alist) limit)
@@ -253,6 +252,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 	(save-restriction
 	  (symbol-overlay-narrow scope)
 	  (and scope (/= pt (point)) (user-error "Wrong scope"))
+	  (symbol-overlay-remove keyword)
 	  (symbol-overlay-count
 	   (symbol-overlay-put-all symbol scope keyword)))))))
 
@@ -264,7 +264,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark `symbol-overlay-mark'."
   (interactive)
-  (and (not (minibufferp)) symbol-overlay-mark (goto-char symbol-overlay-mark)))
+  (or (minibufferp) (not symbol-overlay-mark) (goto-char symbol-overlay-mark)))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
@@ -281,6 +281,7 @@ DIR must be 1 or -1."
 (defun symbol-overlay-basic-jump (symbol dir)
   "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
   (let ((case-fold-search nil)
+	(bounds (bounds-of-thing-at-point 'symbol))
 	(offset (- (point) (if (> dir 0) (match-end 0) (match-beginning 0))))
 	target)
     (goto-char (- (point) offset))
@@ -376,11 +377,10 @@ DIR must be 1 or -1."
 	   new)
       (beginning-of-thing 'symbol)
       (setq symbol-overlay-mark (point)
-	    new (funcall replace-function symbol scope))
+	    new (funcall replace-function keyword scope))
       (unless (string= new symbol)
-	(symbol-overlay-remove (symbol-overlay-assoc new t))
-	(setq keyword (symbol-overlay-put-all
-		       new scope (symbol-overlay-assoc symbol))))
+	(symbol-overlay-remove (symbol-overlay-assoc new t)))
+      (setq keyword (symbol-overlay-put-all new scope keyword))
       (when (string= new (symbol-overlay-get-symbol nil t))
 	(beginning-of-thing 'symbol)
 	(symbol-overlay-count keyword)))))
@@ -390,23 +390,25 @@ DIR must be 1 or -1."
   "Query replace symbol at point."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (symbol scope)
+   '(lambda (keyword scope)
       (and scope (user-error "Query replace is invalid in scope"))
-      (let* ((new (read-string "Replacement: "))
-	     (defaults (cons symbol new))
-	     (inhibit-modification-hooks t))
+      (let* ((symbol (car keyword))
+	     (new (read-string "Replacement: "))
+	     (defaults (cons symbol new)))
+	(symbol-overlay-remove keyword)
 	(query-replace-regexp symbol new)
 	(setq query-replace-defaults
-	      (if (< emacs-major-version 25) `,defaults `(,defaults))))
-      (symbol-overlay-get-symbol new))))
+	      (if (< emacs-major-version 25) `,defaults `(,defaults)))
+	(symbol-overlay-get-symbol new)))))
 
 ;;;###autoload
 (defun symbol-overlay-rename ()
   "Rename symbol at point on all its occurrences."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (symbol scope)
-      (let ((new (read-string (concat "Rename"
+   '(lambda (keyword scope)
+      (let ((symbol (car keyword))
+	    (new (read-string (concat "Rename"
 				      (and scope " in scope")
 				      ": ")))
 	    (inhibit-modification-hooks t))
@@ -414,6 +416,7 @@ DIR must be 1 or -1."
 	  (save-restriction
 	    (symbol-overlay-narrow scope)
 	    (goto-char (point-min))
+	    (symbol-overlay-remove keyword)
 	    (while (re-search-forward symbol nil t) (replace-match new))))
 	(symbol-overlay-get-symbol new)))))
 
