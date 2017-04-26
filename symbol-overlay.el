@@ -485,7 +485,7 @@ DIR must be 1 or -1."
 	     (new (symbol-overlay-get-symbol txt)))
 	(unless (string= new symbol)
 	  (symbol-overlay-remove keyword)
-	  (query-replace-regexp symbol new)
+	  (query-replace-regexp symbol txt)
 	  (setq query-replace-defaults
 		(if (< emacs-major-version 25) `,defaults `(,defaults)))
 	  new)))))
@@ -508,7 +508,7 @@ DIR must be 1 or -1."
 	      (symbol-overlay-narrow scope)
 	      (goto-char (point-min))
 	      (symbol-overlay-remove keyword)
-	      (while (re-search-forward symbol nil t) (replace-match new))
+	      (while (re-search-forward symbol nil t) (replace-match txt))
 	      new)))))))
 
 (defun symbol-overlay-refresh (beg end len)
