@@ -169,7 +169,8 @@ if specified."
 (make-variable-buffer-local 'symbol-overlay-temp-symbol)
 
 (defvar symbol-overlay-temp-face
-  '((bold) (underline))
+  '((:background "gray70")
+    (:foreground "gray30"))
   "Face for temporary highlighting.")
 
 (defvar symbol-overlay-timer nil
@@ -245,8 +246,7 @@ This only effects symbols in the current displayed window."
 Use COLOR as the overlay's background color."
   (let ((overlay (make-overlay (match-beginning 0) (match-end 0)))
 	(face `((:background ,color)
-		(:foreground "black")
-		(underline))))
+		(:foreground "black"))))
     (overlay-put overlay 'face face)
     (overlay-put overlay 'keymap symbol-overlay-map)
     (overlay-put overlay 'evaporate t)
