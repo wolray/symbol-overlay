@@ -9,6 +9,10 @@ Highlight symbols with overlays while providing a keymap for various operations 
 What's New!
 ---
 
+### 20170426:
+
+Minor-mode `symbol-overlay-mode` for auto-highlighting is now enabled.
+
 ### 20170423:
 
 Toggling to isearch-mode is now enabled. Try `symbol-overlay-isearch-literally` via "s" to search the not-quoted symbol in isearch-mode.
@@ -39,6 +43,7 @@ When putting overlays on symbols, **an auto-activated overlay-inside keymap** wi
 - Toggle all overlays of symbol at point: `symbol-overlay-put`
 - Jump between locations of symbol at point: `symbol-overlay-jump-next` & `symbol-overlay-jump-prev`
 - Switch to the closest symbol highlighted nearby: `symbol-overlay-switch-forward` & `symbol-overlay-switch-backward`
+- Minor mode for auto-highlighting symbol at point: `symbol-overlay-mode`
 - Remove all highlighted symbols in the buffer: `symbol-overlay-remove-all`
 - Copy symbol at point: `symbol-overlay-save-symbol`
 - Toggle overlays to be showed in buffer or only in scope: `symbol-overlay-toggle-in-scope`
@@ -57,6 +62,7 @@ To use `symbol-overlay` in your Emacs, you need only to bind three keys:
 	(global-set-key (kbd "M-i") 'symbol-overlay-put)
 	(global-set-key (kbd "M-u") 'symbol-overlay-switch-backward)
 	(global-set-key (kbd "M-o") 'symbol-overlay-switch-forward)
+	(global-set-key (kbd "<f8>") 'symbol-overlay-mode)
 
 Default key-bindings defined in `symbol-overlay-map`:
 
