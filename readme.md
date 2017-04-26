@@ -56,7 +56,7 @@ When putting overlays on symbols, **an auto-activated overlay-inside keymap** wi
 Usage
 ---
 
-To use `symbol-overlay` in your Emacs, you need only to bind three keys:
+To use `symbol-overlay` in your Emacs, you need only to bind these keys:
 
     (require 'symbol-overlay)
 	(global-set-key (kbd "M-i") 'symbol-overlay-put)

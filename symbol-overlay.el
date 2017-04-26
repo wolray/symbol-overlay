@@ -63,7 +63,7 @@
 
 ;; Usage
 
-;; To use `symbol-overlay' in your Emacs, you need only to bind three keys:
+;; To use `symbol-overlay' in your Emacs, you need only to bind these keys:
 ;; (require 'symbol-overlay)
 ;; (global-set-key (kbd "M-i") 'symbol-overlay-put)
 ;; (global-set-key (kbd "M-u") 'symbol-overlay-switch-backward)
