@@ -134,12 +134,9 @@ If NOERROR is non-nil, just return nil when no symbol is found."
     (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
       (unless noerror (user-error "No symbol at point")))))
 
-(defun symbol-overlay-assoc (symbol &optional noerror)
-  "Get SYMBOL's associated list in `symbol-overlay-keywords-alist'.
-If NOERROR is non-nil, just return nil when keyword is not found."
-  (let ((keyword (assoc symbol symbol-overlay-keywords-alist)))
-    (if keyword keyword
-      (unless noerror (user-error "Symbol is not highlighted")))))
+(defun symbol-overlay-assoc (symbol)
+  "Get SYMBOL's associated list in `symbol-overlay-keywords-alist'."
+  (assoc symbol symbol-overlay-keywords-alist))
 
 (defun symbol-overlay-remove (keyword)
   "Delete the KEYWORD list and all its overlays."
@@ -153,16 +150,26 @@ If NOERROR is non-nil, just return nil when keyword is not found."
   "Nil or a function that returns a cons of region beginning and end.")
 (make-variable-buffer-local 'symbol-overlay-narrow-function)
 
-(defun symbol-overlay-narrow (scope)
+(defun symbol-overlay-narrow (scope &optional window-only)
   "Narrow to a specific region when SCOPE is non-nil.
-Use default method `narrow-to-defun' or `symbol-overlay-narrow-function'
-if specified."
-  (when scope
-    (let ((f symbol-overlay-narrow-function)
-	  region)
-      (if (not f) (narrow-to-defun)
-	(setq region (funcall f))
-	(narrow-to-region (car region) (cdr region))))))
+It uses `narrow-to-defun' or `symbol-overlay-narrow-function' if specified.
+If WINDOW-ONLY is non-nil, narrow to current displayed window."
+  (if scope
+      (let ((f symbol-overlay-narrow-function)
+	    region)
+	(if (not f) (narrow-to-defun)
+	  (setq region (funcall f))
+	  (narrow-to-region (car region) (cdr region))))
+    (when window-only
+      (let ((lines (round (window-screen-lines)))
+	    (pt (point))
+	    beg)
+	(forward-line (- lines))
+	(setq beg (point))
+	(goto-char pt)
+	(forward-line lines)
+	(narrow-to-region beg (point))
+	(goto-char pt)))))
 
 (defvar symbol-overlay-temp-symbol nil
   "Symbol for temporary highlighting.")
@@ -184,7 +191,7 @@ if specified."
   (and symbol-overlay-timer (cancel-timer symbol-overlay-timer))
   (setq symbol-overlay-timer
 	(and value (> value 0)
-	     (run-with-idle-timer value t 'symbol-overlay-put-temp-window))))
+	     (run-with-idle-timer value t 'symbol-overlay-put-temp-in-window))))
 
 (defun symbol-overlay-put-temp-one (symbol bounds)
   "Put overlay on one occurrence of SYMBOL with BOUNDS.
@@ -193,33 +200,28 @@ It use `symbol-overlay-temp-face' as face and is only for temporary use."
     (overlay-put overlay 'face symbol-overlay-temp-face)
     (overlay-put overlay 'symbol "")))
 
-(defun symbol-overlay-put-temp-window ()
+(defun symbol-overlay-put-temp-in-window ()
   "Highlight symbol at point when there are more than 2 occurrences.
 This only effects symbols in the current displayed window."
-  (when symbol-overlay-mode
+  (unless (or (minibufferp) (not symbol-overlay-mode))
     (let ((case-fold-search nil)
 	  (symbol (symbol-overlay-get-symbol nil t))
-	  (pt (point))
-	  lines beg bounds first p)
-      (when (and symbol-overlay-mode
-		 symbol
-		 (not (symbol-overlay-assoc symbol t)))
-	(setq symbol-overlay-temp-symbol symbol
-	      lines (round (window-screen-lines)))
-	(save-excursion
-	  (forward-line (- lines))
-	  (setq beg (point))
-	  (goto-char pt)
-	  (forward-line lines)
-	  (save-restriction
-	    (narrow-to-region beg (point))
-	    (goto-char (point-min))
-	    (while (re-search-forward symbol nil t)
-	      (setq bounds (cons (match-beginning 0) (match-end 0)))
-	      (if (not first) (setq first bounds)
-		(symbol-overlay-put-temp-one symbol bounds)
-		(or p (setq p t))))
-	    (and p (symbol-overlay-put-temp-one symbol first))))))))
+	  bounds first p)
+      (and symbol-overlay-mode
+	   symbol
+	   (not (symbol-overlay-assoc symbol))
+	   (save-excursion
+	     (symbol-overlay-remove-temp)
+	     (save-restriction
+	       (symbol-overlay-narrow nil t)
+	       (goto-char (point-min))
+	       (while (re-search-forward symbol nil t)
+		 (setq bounds (cons (match-beginning 0) (match-end 0)))
+		 (if (not first) (setq first bounds)
+		   (symbol-overlay-put-temp-one symbol bounds)
+		   (or p (setq p t))))
+	       (and p (symbol-overlay-put-temp-one symbol first))
+	       (setq symbol-overlay-temp-symbol symbol)))))))
 
 (defun symbol-overlay-remove-temp ()
   "Delete all temporary overlays."
@@ -227,9 +229,11 @@ This only effects symbols in the current displayed window."
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (let ((symbol (symbol-overlay-get-symbol nil t)))
-    (or (string= symbol symbol-overlay-temp-symbol)
-	(symbol-overlay-remove-temp))))
+  (unless (or (minibufferp)
+	      (string= (symbol-overlay-get-symbol nil t)
+		       symbol-overlay-temp-symbol))
+    (symbol-overlay-remove-temp)
+    (setq symbol-overlay-temp-symbol nil)))
 
 (define-minor-mode symbol-overlay-mode
   "Minor mode for auto-highlighting symbol at point."
@@ -261,6 +265,7 @@ If KEYWORD is non-nil, use its color on new overlays."
 	 (limit (length symbol-overlay-colors))
 	 (color (or (cddr keyword) (elt symbol-overlay-colors (random limit))))
 	 (colors (mapcar 'cddr symbol-overlay-keywords-alist))
+	 (pt (point))
 	 p)
     (if (< (length symbol-overlay-keywords-alist) limit)
 	(while (seq-position colors color)
@@ -273,6 +278,7 @@ If KEYWORD is non-nil, use its color on new overlays."
     (save-excursion
       (save-restriction
 	(symbol-overlay-narrow scope)
+	(and scope (/= pt (point)) (user-error "Wrong scope"))
 	(goto-char (point-min))
 	(while (re-search-forward symbol nil t)
 	  (symbol-overlay-put-one symbol color)
@@ -285,15 +291,17 @@ If KEYWORD is non-nil, use its color on new overlays."
 (defun symbol-overlay-count (keyword &optional show-color)
   "Show the number of KEYWORD's occurrences.
 If SHOW-COLOR is non-nil, display the color used by current overlay."
-  (let* ((symbol (car keyword))
-	 (before (symbol-overlay-get-list symbol 'car))
-	 (after (symbol-overlay-get-list symbol 'cdr))
-	 (count (length before)))
-    (message (concat (substring symbol 3 -3) ": %d/%d"
-		     (and (cadr keyword) " in scope")
-		     (and show-color (format " (%s)" (cddr keyword))))
-	     (+ count 1)
-	     (+ count (length after)))))
+  (when keyword
+    (let* ((symbol (car keyword))
+	   (before (symbol-overlay-get-list symbol 'car))
+	   (after (symbol-overlay-get-list symbol 'cdr))
+	   (count (length before)))
+      (message (concat (substring symbol 3 -3)
+		       ": %d/%d"
+		       (and keyword (cadr keyword) " in scope")
+		       (and show-color (format " (%s)" (cddr keyword))))
+	       (+ count 1)
+	       (+ count (length after))))))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
@@ -301,11 +309,11 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
   (interactive)
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
-	   (keyword (symbol-overlay-assoc symbol t)))
+	   (keyword (symbol-overlay-assoc symbol)))
       (if keyword
 	  (progn
 	    (symbol-overlay-remove keyword)
-	    (symbol-overlay-put-temp-window))
+	    (symbol-overlay-put-temp-in-window))
 	(and (looking-at-p "\\_>") (backward-char))
 	(symbol-overlay-count (symbol-overlay-put-all symbol) t)))))
 
@@ -333,15 +341,10 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol))
-	   (scope (not (cadr keyword)))
-	   (pt (point)))
-      (save-excursion
-	(save-restriction
-	  (symbol-overlay-narrow scope)
-	  (and scope (/= pt (point)) (user-error "Wrong scope"))
-	  (symbol-overlay-remove keyword)
-	  (symbol-overlay-count
-	   (symbol-overlay-put-all symbol scope keyword)))))))
+	   (scope (not (cadr keyword))))
+      (symbol-overlay-remove keyword)
+      (symbol-overlay-count
+       (symbol-overlay-put-all symbol scope keyword)))))
 
 (defvar symbol-overlay-mark nil
   "A mark used for jumping back to the point saved befored.")
@@ -464,9 +467,9 @@ DIR must be 1 or -1."
 	   new)
       (beginning-of-thing 'symbol)
       (setq symbol-overlay-mark (point)
-	    new (funcall replace-function keyword scope))
+	    new (funcall replace-function symbol scope))
       (when new
-	(symbol-overlay-remove (symbol-overlay-assoc new t))
+	(symbol-overlay-remove (symbol-overlay-assoc new))
 	(setq keyword (symbol-overlay-put-all new scope keyword))
 	(when (string= new (symbol-overlay-get-symbol nil t))
 	  (beginning-of-thing 'symbol)
@@ -477,14 +480,13 @@ DIR must be 1 or -1."
   "Query replace symbol at point."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (keyword scope)
+   '(lambda (symbol scope)
       (and scope (user-error "Query replace is invalid in scope"))
-      (let* ((symbol (car keyword))
-	     (txt (read-string "Replacement: "))
+      (let* ((txt (read-string "Replacement: "))
 	     (defaults (cons symbol txt))
 	     (new (symbol-overlay-get-symbol txt)))
 	(unless (string= new symbol)
-	  (symbol-overlay-remove keyword)
+	  (symbol-overlay-remove (symbol-overlay-assoc symbol))
 	  (query-replace-regexp symbol txt)
 	  (setq query-replace-defaults
 		(if (< emacs-major-version 25) `,defaults `(,defaults)))
@@ -495,19 +497,18 @@ DIR must be 1 or -1."
   "Rename symbol at point on all its occurrences."
   (interactive)
   (symbol-overlay-replace-call
-   '(lambda (keyword scope)
-      (let* ((inhibit-modification-hooks t)
-	     (symbol (car keyword))
-	     (txt (read-string (concat "Rename"
+   '(lambda (symbol scope)
+      (let* ((txt (read-string (concat "Rename"
 				       (and scope " in scope")
 				       ": ")))
-	     (new (symbol-overlay-get-symbol txt)))
+	     (new (symbol-overlay-get-symbol txt))
+	     (inhibit-modification-hooks t))
 	(unless (string= new symbol)
 	  (save-excursion
 	    (save-restriction
 	      (symbol-overlay-narrow scope)
 	      (goto-char (point-min))
-	      (symbol-overlay-remove keyword)
+	      (symbol-overlay-remove (symbol-overlay-assoc symbol))
 	      (while (re-search-forward symbol nil t) (replace-match txt))
 	      new)))))))
 
