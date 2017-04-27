@@ -150,11 +150,19 @@ If NOERROR is non-nil, just return nil when no symbol is found."
   "Nil or a function that returns a cons of region beginning and end.")
 (make-variable-buffer-local 'symbol-overlay-narrow-function)
 
+(defvar symbol-overlay-temp-symbol nil
+  "Symbol for temporary highlighting.")
+(make-variable-buffer-local 'symbol-overlay-temp-symbol)
+
+(defvar symbol-overlay-temp-in-scope nil
+  "If non-nil, force to narrow to scope before temporary highlighting.")
+(make-variable-buffer-local 'symbol-overlay-temp-in-scope)
+
 (defun symbol-overlay-narrow (scope &optional window-only)
   "Narrow to a specific region when SCOPE is non-nil.
 It uses `narrow-to-defun' or `symbol-overlay-narrow-function' if specified.
-If WINDOW-ONLY is non-nil, narrow to current displayed window."
-  (if scope
+If SCOPE is nil and WINDOW-ONLY is non-nil, narrow to current displayed window."
+  (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
       (let ((f symbol-overlay-narrow-function)
 	    region)
 	(if (not f) (narrow-to-defun)
@@ -168,17 +176,46 @@ If WINDOW-ONLY is non-nil, narrow to current displayed window."
 	(setq beg (point))
 	(goto-char pt)
 	(forward-line lines)
-	(narrow-to-region beg (point))
-	(goto-char pt)))))
-
-(defvar symbol-overlay-temp-symbol nil
-  "Symbol for temporary highlighting.")
-(make-variable-buffer-local 'symbol-overlay-temp-symbol)
+	(narrow-to-region beg (point))))))
 
 (defvar symbol-overlay-temp-face
   '((:background "gray70")
     (:foreground "gray30"))
   "Face for temporary highlighting.")
+
+(defun symbol-overlay-put-temp-one (symbol bounds)
+  "Put overlay on one occurrence of SYMBOL with BOUNDS.
+It use `symbol-overlay-temp-face' as face and is only for temporary use."
+  (let ((overlay (make-overlay (car bounds) (cdr bounds))))
+    (overlay-put overlay 'face symbol-overlay-temp-face)
+    (overlay-put overlay 'symbol "")))
+
+(defun symbol-overlay-remove-temp ()
+  "Delete all temporary overlays."
+  (mapc 'delete-overlay (symbol-overlay-get-list ""))
+  (setq symbol-overlay-temp-symbol nil))
+
+(defun symbol-overlay-put-temp-in-window ()
+  "Highlight symbol at point when there are more than 2 occurrences.
+This only effects symbols in the current displayed window."
+  (when symbol-overlay-mode
+    (let ((case-fold-search nil)
+	  (symbol (symbol-overlay-get-symbol nil t))
+	  bounds first p)
+      (when (and symbol (not (symbol-overlay-assoc symbol)))
+	(save-excursion
+	  (symbol-overlay-remove-temp)
+	  (save-restriction
+	    (symbol-overlay-narrow symbol-overlay-temp-in-scope t)
+	    (goto-char (point-min))
+	    (while (re-search-forward symbol nil t)
+	      (setq bounds (cons (match-beginning 0) (match-end 0)))
+	      (if (not first) (setq first bounds)
+		(symbol-overlay-put-temp-one symbol bounds)
+		(or p (setq p t))))
+	    (when p
+	      (symbol-overlay-put-temp-one symbol first)
+	      (setq symbol-overlay-temp-symbol symbol))))))))
 
 (defvar symbol-overlay-timer nil
   "Timer for temporary highlighting.")
@@ -193,47 +230,10 @@ If WINDOW-ONLY is non-nil, narrow to current displayed window."
 	(and value (> value 0)
 	     (run-with-idle-timer value t 'symbol-overlay-put-temp-in-window))))
 
-(defun symbol-overlay-put-temp-one (symbol bounds)
-  "Put overlay on one occurrence of SYMBOL with BOUNDS.
-It use `symbol-overlay-temp-face' as face and is only for temporary use."
-  (let ((overlay (make-overlay (car bounds) (cdr bounds))))
-    (overlay-put overlay 'face symbol-overlay-temp-face)
-    (overlay-put overlay 'symbol "")))
-
-(defun symbol-overlay-put-temp-in-window ()
-  "Highlight symbol at point when there are more than 2 occurrences.
-This only effects symbols in the current displayed window."
-  (unless (or (minibufferp) (not symbol-overlay-mode))
-    (let ((case-fold-search nil)
-	  (symbol (symbol-overlay-get-symbol nil t))
-	  bounds first p)
-      (and symbol-overlay-mode
-	   symbol
-	   (not (symbol-overlay-assoc symbol))
-	   (save-excursion
-	     (symbol-overlay-remove-temp)
-	     (save-restriction
-	       (symbol-overlay-narrow nil t)
-	       (goto-char (point-min))
-	       (while (re-search-forward symbol nil t)
-		 (setq bounds (cons (match-beginning 0) (match-end 0)))
-		 (if (not first) (setq first bounds)
-		   (symbol-overlay-put-temp-one symbol bounds)
-		   (or p (setq p t))))
-	       (and p (symbol-overlay-put-temp-one symbol first))
-	       (setq symbol-overlay-temp-symbol symbol)))))))
-
-(defun symbol-overlay-remove-temp ()
-  "Delete all temporary overlays."
-  (mapc 'delete-overlay (symbol-overlay-get-list "")))
-
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (unless (or (minibufferp)
-	      (string= (symbol-overlay-get-symbol nil t)
-		       symbol-overlay-temp-symbol))
-    (symbol-overlay-remove-temp)
-    (setq symbol-overlay-temp-symbol nil)))
+  (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
+    (symbol-overlay-remove-temp)))
 
 (define-minor-mode symbol-overlay-mode
   "Minor mode for auto-highlighting symbol at point."
@@ -273,7 +273,7 @@ If KEYWORD is non-nil, use its color on new overlays."
       (setq color (symbol-overlay-remove
 		   (car (last symbol-overlay-keywords-alist)))))
     (and symbol-overlay-mode
-	 (string= symbol symbol-overlay-temp-symbol)
+	 symbol-overlay-temp-symbol
 	 (symbol-overlay-remove-temp))
     (save-excursion
       (save-restriction
