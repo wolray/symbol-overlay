@@ -158,17 +158,18 @@ If NOERROR is non-nil, just return nil when no symbol is found."
   "If non-nil, force to narrow to scope before temporary highlighting.")
 (make-variable-buffer-local 'symbol-overlay-temp-in-scope)
 
-(defun symbol-overlay-narrow (scope &optional window-only)
-  "Narrow to a specific region when SCOPE is non-nil.
-It uses `narrow-to-defun' or `symbol-overlay-narrow-function' if specified.
-If SCOPE is nil and WINDOW-ONLY is non-nil, narrow to current displayed window."
-  (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
+(defun symbol-overlay-narrow (scope &optional window)
+  "Narrow to a specific region.
+Region might be current scope or displayed window or a specific one,
+depending on `symbol-overlay-temp-in-scope', `symbol-overlay-temp-symbol',
+SCOPE, `symbol-overlay-narrow-function' and WINDOW."
+  (if (or scope (and symbol-overlay-temp-in-scope symbol-overlay-temp-symbol))
       (let ((f symbol-overlay-narrow-function)
 	    region)
 	(if (not f) (narrow-to-defun)
 	  (setq region (funcall f))
 	  (narrow-to-region (car region) (cdr region))))
-    (when window-only
+    (when window
       (let ((lines (round (window-screen-lines)))
 	    (pt (point))
 	    beg)
@@ -203,8 +204,8 @@ This only effects symbols in the current displayed window."
 	  (symbol (symbol-overlay-get-symbol nil t))
 	  bounds first p)
       (when (and symbol (not (symbol-overlay-assoc symbol)))
+	(symbol-overlay-remove-temp)
 	(save-excursion
-	  (symbol-overlay-remove-temp)
 	  (save-restriction
 	    (symbol-overlay-narrow symbol-overlay-temp-in-scope t)
 	    (goto-char (point-min))
@@ -240,8 +241,8 @@ This only effects symbols in the current displayed window."
   nil " SO" nil
   (if symbol-overlay-mode
       (progn
-	(symbol-overlay-update-timer symbol-overlay-idle-time)
-        (add-hook 'post-command-hook 'symbol-overlay-post-command nil t))
+	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+	(symbol-overlay-update-timer symbol-overlay-idle-time))
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
@@ -272,9 +273,7 @@ If KEYWORD is non-nil, use its color on new overlays."
 	  (setq color (elt symbol-overlay-colors (random limit))))
       (setq color (symbol-overlay-remove
 		   (car (last symbol-overlay-keywords-alist)))))
-    (and symbol-overlay-mode
-	 symbol-overlay-temp-symbol
-	 (symbol-overlay-remove-temp))
+    (and symbol-overlay-temp-symbol (symbol-overlay-remove-temp))
     (save-excursion
       (save-restriction
 	(symbol-overlay-narrow scope)
