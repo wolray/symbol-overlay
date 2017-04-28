@@ -329,9 +329,9 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
   "Copy symbol at point."
   (interactive)
   (unless (minibufferp)
-    (symbol-overlay-get-symbol)
-    (kill-ring-save (match-beginning 0) (match-end 0))
-    (message "Current symbol saved")))
+    (let ((bounds (bounds-of-thing-at-point 'symbol)))
+      (kill-ring-save (car bounds) (cdr bounds))
+      (message "Current symbol saved"))))
 
 ;;;###autoload
 (defun symbol-overlay-toggle-in-scope ()
@@ -369,10 +369,10 @@ DIR must be 1 or -1."
 
 (defun symbol-overlay-basic-jump (symbol dir)
   "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
-  (let ((case-fold-search nil)
-	(bounds (bounds-of-thing-at-point 'symbol))
-	(offset (- (point) (if (> dir 0) (match-end 0) (match-beginning 0))))
-	target)
+  (let* ((case-fold-search nil)
+	 (bounds (bounds-of-thing-at-point 'symbol))
+	 (offset (- (point) (if (> dir 0) (cdr bounds) (car bounds))))
+	 target)
     (goto-char (- (point) offset))
     (setq target (re-search-forward symbol nil t dir))
     (unless target
@@ -450,9 +450,8 @@ DIR must be 1 or -1."
   "Isearch symbol at point literally, without `regexp-quote' the symbol."
   (interactive)
   (unless (minibufferp)
-    (let ((symbol (symbol-overlay-get-symbol))
-	  (beg (match-beginning 0)))
-      (goto-char beg)
+    (let ((symbol (symbol-overlay-get-symbol)))
+      (beginning-of-thing 'symbol)
       (isearch-forward nil t)
       (isearch-yank-string (substring symbol 3 -3)))))
 
@@ -480,7 +479,7 @@ DIR must be 1 or -1."
   (interactive)
   (symbol-overlay-replace-call
    '(lambda (symbol scope)
-      (and scope (user-error "Query replace is invalid in scope"))
+      (and scope (user-error "Query-replace is invalid in scope"))
       (let* ((txt (read-string "Replacement: "))
 	     (defaults (cons symbol txt))
 	     (new (symbol-overlay-get-symbol txt)))
