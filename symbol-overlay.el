@@ -365,7 +365,9 @@ DIR must be 1 or -1."
       (save-restriction
 	(symbol-overlay-narrow (cadr keyword))
 	(funcall jump-function symbol dir)
-	(symbol-overlay-count keyword)))))
+	(if keyword (symbol-overlay-count keyword)
+	  (symbol-overlay-mode)
+	  (symbol-overlay-put-temp-in-window))))))
 
 (defun symbol-overlay-basic-jump (symbol dir)
   "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
