@@ -507,7 +507,7 @@ DIR must be 1 or -1."
 	      (symbol-overlay-narrow scope)
 	      (goto-char (point-min))
 	      (symbol-overlay-remove (symbol-overlay-assoc symbol))
-	      (while (re-search-forward symbol nil t) (replace-match txt))
+	      (while (re-search-forward symbol nil t) (replace-match txt t))
 	      new)))))))
 
 (defun symbol-overlay-refresh (beg end len)
