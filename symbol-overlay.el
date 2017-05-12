@@ -3,7 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
-;; Version: 3.3
+;; Version: 3.4
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3"))
@@ -147,7 +147,7 @@ If NOERROR is non-nil, just return nil when no symbol is found."
     (cddr keyword)))
 
 (defvar symbol-overlay-narrow-function nil
-  "Nil or a function that returns a cons of region beginning and end.")
+  "Nil or a function that narrows to a specific region.")
 (make-variable-buffer-local 'symbol-overlay-narrow-function)
 
 (defvar symbol-overlay-temp-symbol nil
@@ -166,22 +166,18 @@ SCOPE, `symbol-overlay-narrow-function' and WINDOW."
   (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
       (let ((f symbol-overlay-narrow-function)
 	    (pt (point))
-	    region min max p)
+	    min max p)
 	(save-excursion
-	  (if f (progn (setq region (funcall f))
-		       (narrow-to-region (car region) (cdr region)))
-	    (if (eq scope 'scope) (narrow-to-defun)
-	      (if (eq scope 'paragraph) (setq p t)
-		(save-excursion
-		  (save-restriction
-		    (narrow-to-defun)
-		    (setq min (point-min)
-			  max (point-max)
-			  p (/= pt (point))))))
-	      (and p (setq min (progn (backward-paragraph) (point))
-			   max (progn (forward-paragraph) (point))))
-	      (narrow-to-region min max))))
-	(setq scope (if p 'paragraph 'scope)))
+	  (if f (funcall f)
+	    (save-excursion
+	      (save-restriction
+		(narrow-to-defun)
+		(setq min (point-min)
+		      max (point-max)
+		      p (/= pt (point)))))
+	    (and p (setq min (progn (backward-paragraph) (point))
+			 max (progn (forward-paragraph) (point))))
+	    (narrow-to-region min max))))
     (when window
       (let ((lines (round (window-screen-lines)))
 	    (pt (point))
@@ -191,8 +187,7 @@ SCOPE, `symbol-overlay-narrow-function' and WINDOW."
 	  (setq beg (point))
 	  (goto-char pt)
 	  (forward-line lines)
-	  (narrow-to-region beg (point))))))
-  scope)
+	  (narrow-to-region beg (point)))))))
 
 (defvar symbol-overlay-temp-face
   '((:background "gray70")
@@ -291,7 +286,7 @@ If KEYWORD is non-nil, use its color on new overlays."
     (and symbol-overlay-temp-symbol (symbol-overlay-remove-temp))
     (save-excursion
       (save-restriction
-	(setq scope (symbol-overlay-narrow scope))
+	(symbol-overlay-narrow scope)
 	(goto-char (point-min))
 	(while (re-search-forward symbol nil t)
 	  (symbol-overlay-put-one symbol color)
@@ -306,15 +301,12 @@ If KEYWORD is non-nil, use its color on new overlays."
 If SHOW-COLOR is non-nil, display the color used by current overlay."
   (when keyword
     (let* ((symbol (car keyword))
-	   (scope (cadr keyword))
 	   (before (symbol-overlay-get-list symbol 'car))
 	   (after (symbol-overlay-get-list symbol 'cdr))
 	   (count (length before)))
       (message (concat (substring symbol 3 -3)
 		       ": %d/%d"
-		       (and scope
-			    (concat " in " (if (eq scope 'scope) "scope"
-					     "paragraph (scope not found)")))
+		       (and keyword (cadr keyword) " in scope")
 		       (and show-color (format " (%s)" (cddr keyword))))
 	       (+ count 1)
 	       (+ count (length after))))))
