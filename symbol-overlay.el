@@ -68,7 +68,8 @@
 ;; (global-set-key (kbd "M-i") 'symbol-overlay-put)
 ;; (global-set-key (kbd "M-u") 'symbol-overlay-switch-backward)
 ;; (global-set-key (kbd "M-o") 'symbol-overlay-switch-forward)
-;; (global-set-key (kbd "<f8>") 'symbol-overlay-mode)
+;; (global-set-key (kbd "<f7>") 'symbol-overlay-mode)
+;; (global-set-key (kbd "<f8>") 'symbol-overlay-remove-all)
 
 ;; Default key-bindings are defined in `symbol-overlay-map'.
 ;; You can re-bind the commands to any keys you prefer by simply writing
@@ -84,14 +85,13 @@
     (define-key map (kbd "i") 'symbol-overlay-put)
     (define-key map (kbd "u") 'symbol-overlay-jump-prev)
     (define-key map (kbd "o") 'symbol-overlay-jump-next)
-    (define-key map (kbd "k") 'symbol-overlay-remove-all)
     (define-key map (kbd "w") 'symbol-overlay-save-symbol)
     (define-key map (kbd "t") 'symbol-overlay-toggle-in-scope)
     (define-key map (kbd "e") 'symbol-overlay-echo-mark)
     (define-key map (kbd "d") 'symbol-overlay-jump-to-definition)
     (define-key map (kbd "s") 'symbol-overlay-isearch-literally)
     (define-key map (kbd "q") 'symbol-overlay-query-replace)
-    (define-key map (kbd "SPC") 'symbol-overlay-rename)
+    (define-key map (kbd "r") 'symbol-overlay-rename)
     map)
   "Keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
@@ -161,23 +161,38 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 (defun symbol-overlay-narrow (scope &optional window)
   "Narrow to a specific region.
 Region might be current scope or displayed window or a specific one,
-depending on `symbol-overlay-temp-in-scope', `symbol-overlay-temp-symbol',
+depending on `symbol-overlay-temp-symbol', `symbol-overlay-temp-in-scope',
 SCOPE, `symbol-overlay-narrow-function' and WINDOW."
-  (if (or scope (and symbol-overlay-temp-in-scope symbol-overlay-temp-symbol))
+  (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
       (let ((f symbol-overlay-narrow-function)
-	    region)
-	(if (not f) (narrow-to-defun)
-	  (setq region (funcall f))
-	  (narrow-to-region (car region) (cdr region))))
+	    (pt (point))
+	    region min max p)
+	(save-excursion
+	  (if f (progn (setq region (funcall f))
+		       (narrow-to-region (car region) (cdr region)))
+	    (if (eq scope 'scope) (narrow-to-defun)
+	      (if (eq scope 'paragraph) (setq p t)
+		(save-excursion
+		  (save-restriction
+		    (narrow-to-defun)
+		    (setq min (point-min)
+			  max (point-max)
+			  p (/= pt (point))))))
+	      (and p (setq min (progn (backward-paragraph) (point))
+			   max (progn (forward-paragraph) (point))))
+	      (narrow-to-region min max))))
+	(setq scope (if p 'paragraph 'scope)))
     (when window
       (let ((lines (round (window-screen-lines)))
 	    (pt (point))
 	    beg)
-	(forward-line (- lines))
-	(setq beg (point))
-	(goto-char pt)
-	(forward-line lines)
-	(narrow-to-region beg (point))))))
+	(save-excursion
+	  (forward-line (- lines))
+	  (setq beg (point))
+	  (goto-char pt)
+	  (forward-line lines)
+	  (narrow-to-region beg (point))))))
+  scope)
 
 (defvar symbol-overlay-temp-face
   '((:background "gray70")
@@ -265,19 +280,18 @@ If KEYWORD is non-nil, use its color on new overlays."
   (let* ((case-fold-search nil)
 	 (limit (length symbol-overlay-colors))
 	 (color (or (cddr keyword) (elt symbol-overlay-colors (random limit))))
-	 (colors (mapcar 'cddr symbol-overlay-keywords-alist))
+	 (alist symbol-overlay-keywords-alist)
+	 (colors (mapcar 'cddr alist))
 	 (pt (point))
 	 p)
-    (if (< (length symbol-overlay-keywords-alist) limit)
+    (if (< (length alist) limit)
 	(while (seq-position colors color)
 	  (setq color (elt symbol-overlay-colors (random limit))))
-      (setq color (symbol-overlay-remove
-		   (car (last symbol-overlay-keywords-alist)))))
+      (setq color (symbol-overlay-remove (car (last alist)))))
     (and symbol-overlay-temp-symbol (symbol-overlay-remove-temp))
     (save-excursion
       (save-restriction
-	(symbol-overlay-narrow scope)
-	(and scope (/= pt (point)) (user-error "Wrong scope"))
+	(setq scope (symbol-overlay-narrow scope))
 	(goto-char (point-min))
 	(while (re-search-forward symbol nil t)
 	  (symbol-overlay-put-one symbol color)
@@ -292,12 +306,15 @@ If KEYWORD is non-nil, use its color on new overlays."
 If SHOW-COLOR is non-nil, display the color used by current overlay."
   (when keyword
     (let* ((symbol (car keyword))
+	   (scope (cadr keyword))
 	   (before (symbol-overlay-get-list symbol 'car))
 	   (after (symbol-overlay-get-list symbol 'cdr))
 	   (count (length before)))
       (message (concat (substring symbol 3 -3)
 		       ": %d/%d"
-		       (and keyword (cadr keyword) " in scope")
+		       (and scope
+			    (concat " in " (if (eq scope 'scope) "scope"
+					     "paragraph (scope not found)")))
 		       (and show-color (format " (%s)" (cddr keyword))))
 	       (+ count 1)
 	       (+ count (length after))))))
@@ -481,7 +498,7 @@ DIR must be 1 or -1."
   (interactive)
   (symbol-overlay-replace-call
    '(lambda (symbol scope)
-      (and scope (user-error "Query-replace is invalid in scope"))
+      (and scope (user-error "Query-replace invalid in narrowed region"))
       (let* ((txt (read-string "Replacement: "))
 	     (defaults (cons symbol txt))
 	     (new (symbol-overlay-get-symbol txt)))
