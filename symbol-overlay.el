@@ -66,8 +66,8 @@
 ;; To use `symbol-overlay' in your Emacs, you need only to bind these keys:
 ;; (require 'symbol-overlay)
 ;; (global-set-key (kbd "M-i") 'symbol-overlay-put)
-;; (global-set-key (kbd "M-p") 'symbol-overlay-switch-backward)
 ;; (global-set-key (kbd "M-n") 'symbol-overlay-switch-forward)
+;; (global-set-key (kbd "M-p") 'symbol-overlay-switch-backward)
 ;; (global-set-key (kbd "<f7>") 'symbol-overlay-mode)
 ;; (global-set-key (kbd "<f8>") 'symbol-overlay-remove-all)
 
@@ -83,8 +83,8 @@
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'symbol-overlay-put)
-    (define-key map (kbd "p") 'symbol-overlay-jump-prev)
     (define-key map (kbd "n") 'symbol-overlay-jump-next)
+    (define-key map (kbd "p") 'symbol-overlay-jump-prev)
     (define-key map (kbd "w") 'symbol-overlay-save-symbol)
     (define-key map (kbd "t") 'symbol-overlay-toggle-in-scope)
     (define-key map (kbd "e") 'symbol-overlay-echo-mark)
