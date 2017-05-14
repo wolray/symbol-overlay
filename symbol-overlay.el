@@ -190,8 +190,7 @@ SCOPE, `symbol-overlay-narrow-function' and WINDOW."
 	  (narrow-to-region beg (point)))))))
 
 (defvar symbol-overlay-temp-face
-  '((:background "gray70")
-    (:foreground "gray30"))
+  'region
   "Face for temporary highlighting.")
 
 (defun symbol-overlay-put-temp-one (symbol bounds)
