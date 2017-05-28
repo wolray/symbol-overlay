@@ -19,7 +19,7 @@ Toggling to isearch-mode is now enabled. Try `symbol-overlay-isearch-literally` 
 
 ### 20170420:
 
-Toggling overlays to be showed in buffer or only in scope is now enabled.  When symbol is highlighted in scope, all related operations is narrowed to the scope, too. Try `symbol-overlay-toggle-in-scope` via "t".  This feature is applicable only for languages that support the lisp function `narrow-to-defun`. Otherwise you may specify `symbol-overlay-narrow-function` on your own.
+Toggling overlays to be showed in buffer or only in scope is now enabled.  When symbol is highlighted in scope, all related operations is narrowed to the scope, too. Try `symbol-overlay-toggle-in-scope` via "t".  This feature is applicable only for languages that support the lisp function `narrow-to-defun`. Otherwise you may specify `beginning-of-defun-function` and `end-of-defun-function` on your own.
 
 ### 20170417:
 
