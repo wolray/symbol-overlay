@@ -3,7 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
-;; Version: 3.5
+;; Version: 3.6
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3"))
@@ -117,8 +117,8 @@ CAR-OR-CDR must a symbol whose value is 'car or 'cdr, if not nil.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
   (let ((lists (progn (overlay-recenter (point)) (overlay-lists))))
     (seq-filter
-     '(lambda (overlay)
-	(let ((value (overlay-get overlay 'symbol)))
+     '(lambda (ov)
+	(let ((value (overlay-get ov 'symbol)))
 	  (and value
 	       (or (not symbol)
 		   (if (string= value symbol) (not exclude)
@@ -187,13 +187,6 @@ SCOPE and WINDOW."
     (:foreground "gray30"))
   "Face for temporary highlighting.")
 
-(defun symbol-overlay-put-temp-one (symbol bounds)
-  "Put overlay on one occurrence of SYMBOL with BOUNDS.
-It use `symbol-overlay-temp-face' as face and is only for temporary use."
-  (let ((overlay (make-overlay (car bounds) (cdr bounds))))
-    (overlay-put overlay 'face symbol-overlay-temp-face)
-    (overlay-put overlay 'symbol "")))
-
 (defun symbol-overlay-remove-temp ()
   "Delete all temporary overlays."
   (mapc 'delete-overlay (symbol-overlay-get-list ""))
@@ -205,20 +198,20 @@ This only effects symbols in the current displayed window."
   (when symbol-overlay-mode
     (let ((case-fold-search nil)
 	  (symbol (symbol-overlay-get-symbol nil t))
-	  bounds first p)
+	  p)
       (when (and symbol (not (symbol-overlay-assoc symbol)))
 	(symbol-overlay-remove-temp)
 	(save-excursion
 	  (save-restriction
 	    (symbol-overlay-narrow symbol-overlay-temp-in-scope t)
 	    (goto-char (point-min))
-	    (while (re-search-forward symbol nil t)
-	      (setq bounds (cons (match-beginning 0) (match-end 0)))
-	      (if (not first) (setq first bounds)
-		(symbol-overlay-put-temp-one symbol bounds)
+	    (re-search-forward symbol nil t)
+	    (save-match-data
+	      (while (re-search-forward symbol nil t)
+		(symbol-overlay-put-one symbol)
 		(or p (setq p t))))
 	    (when p
-	      (symbol-overlay-put-temp-one symbol first)
+	      (symbol-overlay-put-one symbol)
 	      (setq symbol-overlay-temp-symbol symbol))))))))
 
 (defvar symbol-overlay-timer nil
@@ -249,16 +242,18 @@ This only effects symbols in the current displayed window."
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
-(defun symbol-overlay-put-one (symbol color)
+(defun symbol-overlay-put-one (symbol &optional color)
   "Put overlay on current occurrence of SYMBOL after a match.
-Use COLOR as the overlay's background color."
-  (let ((overlay (make-overlay (match-beginning 0) (match-end 0)))
-	(face `((:background ,color)
-		(:foreground "black"))))
-    (overlay-put overlay 'face face)
-    (overlay-put overlay 'keymap symbol-overlay-map)
-    (overlay-put overlay 'evaporate t)
-    (overlay-put overlay 'symbol symbol)))
+If COLOR is non-nil, use it as the overlay face's background color.
+Otherwise use `symbol-overlay-temp-face' as the face."
+  (let ((ov (make-overlay (match-beginning 0) (match-end 0))))
+    (if color (progn (overlay-put ov 'face `((:background ,color)
+					     (:foreground "black")))
+		     (overlay-put ov 'keymap symbol-overlay-map)
+		     (overlay-put ov 'evaporate t)
+		     (overlay-put ov 'symbol symbol))
+      (overlay-put ov 'face symbol-overlay-temp-face)
+      (overlay-put ov 'symbol ""))))
 
 (defun symbol-overlay-put-all (symbol &optional scope keyword)
   "Put overlays on all occurrences of SYMBOL in the buffer.
@@ -343,15 +338,11 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 	   (scope (not (cadr keyword))))
       (symbol-overlay-count (symbol-overlay-put-all symbol scope keyword)))))
 
-(defvar symbol-overlay-mark nil
-  "A mark used for jumping back to the point saved befored.")
-(make-variable-buffer-local 'symbol-overlay-mark)
-
 ;;;###autoload
 (defun symbol-overlay-echo-mark ()
-  "Jump back to the mark `symbol-overlay-mark'."
+  "Jump back to the mark."
   (interactive)
-  (or (minibufferp) (not symbol-overlay-mark) (goto-char symbol-overlay-mark)))
+  (let ((pt (mark))) (and pt (goto-char pt))))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
@@ -359,7 +350,7 @@ DIR must be 1 or -1."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol)))
-      (setq symbol-overlay-mark (point))
+      (push-mark nil t)
       (save-restriction
 	(symbol-overlay-narrow (cadr keyword))
 	(funcall jump-function symbol dir)
@@ -428,7 +419,7 @@ DIR must be 1 or -1."
 	  (user-error (concat "No more "
 			      (if (> dir 0) "forward" "backward")
 			      " symbols")))
-      (setq symbol-overlay-mark (point))
+      (push-mark nil t)
       (goto-char (overlay-start (car list)))
       (symbol-overlay-count
        (symbol-overlay-assoc (symbol-overlay-get-symbol))))))
@@ -467,8 +458,8 @@ DIR must be 1 or -1."
 	   txt defaults new)
       (and scope (user-error "Query-replace invalid in scope"))
       (beginning-of-thing 'symbol)
-      (setq symbol-overlay-mark (point)
-	    txt (read-string "Replacement: ")
+      (push-mark nil t)
+      (setq txt (read-string "Replacement: ")
 	    new (symbol-overlay-get-symbol txt)
 	    defaults (cons symbol txt))
       (unless (string= new symbol)
@@ -492,8 +483,8 @@ DIR must be 1 or -1."
 	   (scope (cadr keyword))
 	   txt new)
       (beginning-of-thing 'symbol)
-      (setq symbol-overlay-mark (point)
-	    txt (read-string (concat "Rename" (and scope " in scope") ": "))
+      (push-mark nil t)
+      (setq txt (read-string (concat "Rename" (and scope " in scope") ": "))
 	    new (symbol-overlay-get-symbol txt))
       (unless (string= new symbol)
 	(symbol-overlay-remove (symbol-overlay-assoc new))
@@ -510,7 +501,9 @@ DIR must be 1 or -1."
 (defun symbol-overlay-refresh (beg end len)
   "Refresh overlays.  Installed on `after-change-functions'.
 BEG, END and LEN are the beginning, end and length of changed text."
-  (unless (or (minibufferp) (not symbol-overlay-keywords-alist))
+  (unless (or (minibufferp)
+	      (not (or symbol-overlay-keywords-alist
+		       symbol-overlay-temp-symbol)))
     (let ((case-fold-search nil)
 	  (re "\\(\\sw\\|\\s_\\)+"))
       (save-excursion
@@ -522,9 +515,9 @@ BEG, END and LEN are the beginning, end and length of changed text."
 	  (and (not (looking-at-p "\\_<"))
 	       (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
 	       (setq beg (re-search-backward "\\_<")))
-	  (mapc #'(lambda (overlay)
-		    (and (overlay-get overlay 'symbol)
-			 (delete-overlay overlay)))
+	  (mapc #'(lambda (ov)
+		    (and (overlay-get ov 'symbol)
+			 (delete-overlay ov)))
 		(overlays-in beg end))
 	  (mapc #'(lambda (keyword)
 		    (let ((symbol (car keyword)))
