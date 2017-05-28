@@ -33,7 +33,7 @@
 ;; Advantages
 
 ;; When highlighting symbols in a buffer of regular size and language,
-;; `overlay-put' behaves as fast as the traditional Highlighting method
+;; `overlay-put' behaves as fast as the traditional highlighting method
 ;; `font-lock'.  However, for a buffer of major-mode with complicated keywords
 ;; syntax, like haskell-mode, `font-lock' is quite slow even the buffer is less
 ;; than 100 lines.  Besides, when counting the number of highlighted
@@ -146,10 +146,6 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 	  (delq keyword symbol-overlay-keywords-alist))
     (cddr keyword)))
 
-(defvar symbol-overlay-narrow-function nil
-  "Nil or a function that narrows to a specific region.")
-(make-variable-buffer-local 'symbol-overlay-narrow-function)
-
 (defvar symbol-overlay-temp-symbol nil
   "Symbol for temporary highlighting.")
 (make-variable-buffer-local 'symbol-overlay-temp-symbol)
@@ -162,22 +158,19 @@ If NOERROR is non-nil, just return nil when no symbol is found."
   "Narrow to a specific region.
 Region might be current scope or displayed window or a specific one,
 depending on `symbol-overlay-temp-symbol', `symbol-overlay-temp-in-scope',
-SCOPE, `symbol-overlay-narrow-function' and WINDOW."
+SCOPE and WINDOW."
   (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
-      (let ((f symbol-overlay-narrow-function)
-	    (pt (point))
+      (let ((pt (point))
 	    min max p)
 	(save-excursion
-	  (if f (funcall f)
-	    (save-excursion
-	      (save-restriction
-		(narrow-to-defun)
-		(setq min (point-min)
-		      max (point-max)
-		      p (/= pt (point)))))
-	    (and p (setq min (progn (backward-paragraph) (point))
-			 max (progn (forward-paragraph) (point))))
-	    (narrow-to-region min max))))
+	  (save-restriction
+	    (narrow-to-defun)
+	    (setq min (point-min)
+		  max (point-max)
+		  p (/= pt (point))))
+	  (and p (setq min (progn (backward-paragraph) (point))
+		       max (progn (forward-paragraph) (point))))
+	  (narrow-to-region min max)))
     (when window
       (let ((lines (round (window-screen-lines)))
 	    (pt (point))
