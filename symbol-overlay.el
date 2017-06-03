@@ -239,6 +239,7 @@ This only effects symbols in the current displayed window."
   (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
     (symbol-overlay-remove-temp)))
 
+;;;###autoload
 (define-minor-mode symbol-overlay-mode
   "Minor mode for auto-highlighting symbol at point."
   nil " SO" nil
