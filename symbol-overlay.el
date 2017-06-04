@@ -80,6 +80,10 @@
 (require 'thingatpt)
 (require 'seq)
 
+(defgroup symbol-overlay nil
+  "Highlight symbols with keymap-enabled overlays."
+  :group 'convenience)
+
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'symbol-overlay-put)
@@ -96,19 +100,33 @@
   "Keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
 
-(defvar symbol-overlay-keywords-alist)
-(make-variable-buffer-local 'symbol-overlay-keywords-alist)
+(defvar-local symbol-overlay-keywords-alist nil)
 
-(defvar symbol-overlay-colors '("dodger blue"
-				"hot pink"
-				"orange"
-				"orchid"
-				"red"
-				"salmon"
-				"spring green"
-				"turquoise")
+(defcustom symbol-overlay-colors '("dodger blue"
+                                   "hot pink"
+                                   "orange"
+                                   "orchid"
+                                   "red"
+                                   "salmon"
+                                   "spring green"
+                                   "turquoise")
   "Colors used for overlays' background.
 You can add more colors whatever you like.")
+
+(defcustom symbol-overlay-idle-time 0.5
+  "Idle time after every command and before the temporary highlighting."
+  :type 'float)
+
+;;;###autoload
+(define-minor-mode symbol-overlay-mode
+  "Minor mode for auto-highlighting symbol at point."
+  nil " SO" (make-sparse-keymap)
+  (if symbol-overlay-mode
+      (progn
+	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+	(symbol-overlay-update-timer symbol-overlay-idle-time))
+    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
+    (symbol-overlay-remove-temp)))
 
 (defun symbol-overlay-get-list (&optional symbol car-or-cdr exclude)
   "Get all highlighted overlays in the buffer.
@@ -146,13 +164,11 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 	  (delq keyword symbol-overlay-keywords-alist))
     (cddr keyword)))
 
-(defvar symbol-overlay-temp-symbol nil
+(defvar-local symbol-overlay-temp-symbol nil
   "Symbol for temporary highlighting.")
-(make-variable-buffer-local 'symbol-overlay-temp-symbol)
 
-(defvar symbol-overlay-temp-in-scope nil
+(defvar-local symbol-overlay-temp-in-scope nil
   "If non-nil, force to narrow to scope before temporary highlighting.")
-(make-variable-buffer-local 'symbol-overlay-temp-in-scope)
 
 (defun symbol-overlay-narrow (scope &optional window)
   "Narrow to a specific region.
@@ -182,9 +198,8 @@ SCOPE and WINDOW."
 	  (forward-line lines)
 	  (narrow-to-region beg (point)))))))
 
-(defvar symbol-overlay-temp-face
-  '((:background "gray70")
-    (:foreground "gray30"))
+(defface symbol-overlay-temp-face
+  '(t (:inherit 'highlight))
   "Face for temporary highlighting.")
 
 (defun symbol-overlay-remove-temp ()
@@ -217,9 +232,6 @@ This only effects symbols in the current displayed window."
 (defvar symbol-overlay-timer nil
   "Timer for temporary highlighting.")
 
-(defvar symbol-overlay-idle-time 0.5
-  "Idle time after every command and before the temporary highlighting.")
-
 (defun symbol-overlay-update-timer (value)
   "Update `symbol-overlay-timer' with new idle-time VALUE."
   (and symbol-overlay-timer (cancel-timer symbol-overlay-timer))
@@ -232,17 +244,6 @@ This only effects symbols in the current displayed window."
   (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
     (symbol-overlay-remove-temp)))
 
-;;;###autoload
-(define-minor-mode symbol-overlay-mode
-  "Minor mode for auto-highlighting symbol at point."
-  nil " SO" nil
-  (if symbol-overlay-mode
-      (progn
-	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
-	(symbol-overlay-update-timer symbol-overlay-idle-time))
-    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
-    (symbol-overlay-remove-temp)))
-
 (defun symbol-overlay-put-one (symbol &optional color)
   "Put overlay on current occurrence of SYMBOL after a match.
 If COLOR is non-nil, use it as the overlay face's background color.
@@ -253,7 +254,7 @@ Otherwise use `symbol-overlay-temp-face' as the face."
 		     (overlay-put ov 'keymap symbol-overlay-map)
 		     (overlay-put ov 'evaporate t)
 		     (overlay-put ov 'symbol symbol))
-      (overlay-put ov 'face symbol-overlay-temp-face)
+      (overlay-put ov 'face 'symbol-overlay-temp-face)
       (overlay-put ov 'symbol ""))))
 
 (defun symbol-overlay-put-all (symbol &optional scope keyword)
@@ -384,10 +385,9 @@ DIR must be 1 or -1."
   (interactive)
   (symbol-overlay-jump-call 'symbol-overlay-basic-jump -1))
 
-(defvar symbol-overlay-definition-function
+(defvar-local symbol-overlay-definition-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
   "An one-argument function that returns a regexp.")
-(make-variable-buffer-local 'symbol-overlay-definition-function)
 
 ;;;###autoload
 (defun symbol-overlay-jump-to-definition ()
