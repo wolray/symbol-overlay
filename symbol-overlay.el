@@ -120,7 +120,7 @@ You can add more colors whatever you like.")
 ;;;###autoload
 (define-minor-mode symbol-overlay-mode
   "Minor mode for auto-highlighting symbol at point."
-  nil " SO" nil
+  nil " SO" (make-sparse-keymap)
   (if symbol-overlay-mode
       (progn
 	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
