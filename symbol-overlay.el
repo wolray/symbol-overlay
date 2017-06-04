@@ -102,16 +102,20 @@ You can re-bind the commands to any keys you prefer.")
 
 (defvar-local symbol-overlay-keywords-alist nil)
 
-(defvar symbol-overlay-colors '("dodger blue"
-				"hot pink"
-				"orange"
-				"orchid"
-				"red"
-				"salmon"
-				"spring green"
-				"turquoise")
+(defcustom symbol-overlay-colors '("dodger blue"
+                                   "hot pink"
+                                   "orange"
+                                   "orchid"
+                                   "red"
+                                   "salmon"
+                                   "spring green"
+                                   "turquoise")
   "Colors used for overlays' background.
 You can add more colors whatever you like.")
+
+(defcustom symbol-overlay-idle-time 0.5
+  "Idle time after every command and before the temporary highlighting."
+  :type 'float)
 
 (defun symbol-overlay-get-list (&optional symbol car-or-cdr exclude)
   "Get all highlighted overlays in the buffer.
@@ -216,9 +220,6 @@ This only effects symbols in the current displayed window."
 
 (defvar symbol-overlay-timer nil
   "Timer for temporary highlighting.")
-
-(defvar symbol-overlay-idle-time 0.5
-  "Idle time after every command and before the temporary highlighting.")
 
 (defun symbol-overlay-update-timer (value)
   "Update `symbol-overlay-timer' with new idle-time VALUE."
