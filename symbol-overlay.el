@@ -80,6 +80,10 @@
 (require 'thingatpt)
 (require 'seq)
 
+(defgroup symbol-overlay nil
+  "Highlight symbols with keymap-enabled overlays."
+  :group 'convenience)
+
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'symbol-overlay-put)
@@ -182,9 +186,8 @@ SCOPE and WINDOW."
 	  (forward-line lines)
 	  (narrow-to-region beg (point)))))))
 
-(defvar symbol-overlay-temp-face
-  '((:background "gray70")
-    (:foreground "gray30"))
+(defface symbol-overlay-temp-face
+  '(t (:inherit 'highlight))
   "Face for temporary highlighting.")
 
 (defun symbol-overlay-remove-temp ()
@@ -253,7 +256,7 @@ Otherwise use `symbol-overlay-temp-face' as the face."
 		     (overlay-put ov 'keymap symbol-overlay-map)
 		     (overlay-put ov 'evaporate t)
 		     (overlay-put ov 'symbol symbol))
-      (overlay-put ov 'face symbol-overlay-temp-face)
+      (overlay-put ov 'face 'symbol-overlay-temp-face)
       (overlay-put ov 'symbol ""))))
 
 (defun symbol-overlay-put-all (symbol &optional scope keyword)
