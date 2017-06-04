@@ -117,6 +117,17 @@ You can add more colors whatever you like.")
   "Idle time after every command and before the temporary highlighting."
   :type 'float)
 
+;;;###autoload
+(define-minor-mode symbol-overlay-mode
+  "Minor mode for auto-highlighting symbol at point."
+  nil " SO" nil
+  (if symbol-overlay-mode
+      (progn
+	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+	(symbol-overlay-update-timer symbol-overlay-idle-time))
+    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
+    (symbol-overlay-remove-temp)))
+
 (defun symbol-overlay-get-list (&optional symbol car-or-cdr exclude)
   "Get all highlighted overlays in the buffer.
 If SYMBOL is non-nil, get the overlays that belong to it.
@@ -231,17 +242,6 @@ This only effects symbols in the current displayed window."
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
   (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
-    (symbol-overlay-remove-temp)))
-
-;;;###autoload
-(define-minor-mode symbol-overlay-mode
-  "Minor mode for auto-highlighting symbol at point."
-  nil " SO" nil
-  (if symbol-overlay-mode
-      (progn
-	(add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
-	(symbol-overlay-update-timer symbol-overlay-idle-time))
-    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
 (defun symbol-overlay-put-one (symbol &optional color)
