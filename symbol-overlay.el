@@ -100,8 +100,7 @@
   "Keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
 
-(defvar symbol-overlay-keywords-alist)
-(make-variable-buffer-local 'symbol-overlay-keywords-alist)
+(defvar-local symbol-overlay-keywords-alist nil)
 
 (defvar symbol-overlay-colors '("dodger blue"
 				"hot pink"
@@ -150,13 +149,11 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 	  (delq keyword symbol-overlay-keywords-alist))
     (cddr keyword)))
 
-(defvar symbol-overlay-temp-symbol nil
+(defvar-local symbol-overlay-temp-symbol nil
   "Symbol for temporary highlighting.")
-(make-variable-buffer-local 'symbol-overlay-temp-symbol)
 
-(defvar symbol-overlay-temp-in-scope nil
+(defvar-local symbol-overlay-temp-in-scope nil
   "If non-nil, force to narrow to scope before temporary highlighting.")
-(make-variable-buffer-local 'symbol-overlay-temp-in-scope)
 
 (defun symbol-overlay-narrow (scope &optional window)
   "Narrow to a specific region.
@@ -387,10 +384,9 @@ DIR must be 1 or -1."
   (interactive)
   (symbol-overlay-jump-call 'symbol-overlay-basic-jump -1))
 
-(defvar symbol-overlay-definition-function
+(defvar-local symbol-overlay-definition-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
   "An one-argument function that returns a regexp.")
-(make-variable-buffer-local 'symbol-overlay-definition-function)
 
 ;;;###autoload
 (defun symbol-overlay-jump-to-definition ()
