@@ -199,7 +199,7 @@ SCOPE and WINDOW."
 	  (narrow-to-region beg (point)))))))
 
 (defface symbol-overlay-temp-face
-  '(t (:inherit 'highlight))
+  '((t (:inherit 'highlight)))
   "Face for temporary highlighting.")
 
 (defun symbol-overlay-remove-temp ()
