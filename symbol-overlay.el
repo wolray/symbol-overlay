@@ -321,6 +321,8 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
     (mapc 'delete-overlay (symbol-overlay-get-list))
     (setq symbol-overlay-keywords-alist nil)))
 
+(add-hook 'before-revert-hook 'symbol-overlay-remove-all)
+
 ;;;###autoload
 (defun symbol-overlay-save-symbol ()
   "Copy symbol at point."
