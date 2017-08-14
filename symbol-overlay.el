@@ -167,15 +167,14 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 (defvar-local symbol-overlay-temp-symbol nil
   "Symbol for temporary highlighting.")
 
-(defvar-local symbol-overlay-temp-in-scope nil
+(defvar-local symbol-overlay-scope nil
   "If non-nil, force to narrow to scope before temporary highlighting.")
 
 (defun symbol-overlay-narrow (scope &optional window)
   "Narrow to a specific region.
 Region might be current scope or displayed window or a specific one,
-depending on `symbol-overlay-temp-symbol', `symbol-overlay-temp-in-scope',
-SCOPE and WINDOW."
-  (if (or scope (and symbol-overlay-temp-symbol symbol-overlay-temp-in-scope))
+depending on SCOPE and WINDOW."
+  (if scope
       (let ((pt (point))
 	    min max p)
 	(save-excursion
@@ -183,8 +182,9 @@ SCOPE and WINDOW."
 	    (narrow-to-defun)
 	    (setq min (point-min)
 		  max (point-max)
-		  p (/= pt (point))))
-	  (and p (setq min (progn (backward-paragraph) (point))
+		  p (or (/= pt (point)) (= pt (point-max))))))
+        (save-excursion
+          (and p (setq min (progn (backward-paragraph) (point))
 		       max (progn (forward-paragraph) (point))))
 	  (narrow-to-region min max)))
     (when window
@@ -207,7 +207,7 @@ SCOPE and WINDOW."
   (mapc 'delete-overlay (symbol-overlay-get-list ""))
   (setq symbol-overlay-temp-symbol nil))
 
-(defun symbol-overlay-put-temp-in-window ()
+(defun symbol-overlay-put-temp ()
   "Highlight symbol at point when there are more than 2 occurrences.
 This only effects symbols in the current displayed window."
   (when symbol-overlay-mode
@@ -218,7 +218,7 @@ This only effects symbols in the current displayed window."
 	(symbol-overlay-remove-temp)
 	(save-excursion
 	  (save-restriction
-	    (symbol-overlay-narrow symbol-overlay-temp-in-scope t)
+	    (symbol-overlay-narrow symbol-overlay-scope t)
 	    (goto-char (point-min))
 	    (re-search-forward symbol nil t)
 	    (save-match-data
@@ -237,7 +237,7 @@ This only effects symbols in the current displayed window."
   (and symbol-overlay-timer (cancel-timer symbol-overlay-timer))
   (setq symbol-overlay-timer
 	(and value (> value 0)
-	     (run-with-idle-timer value t 'symbol-overlay-put-temp-in-window))))
+	     (run-with-idle-timer value t 'symbol-overlay-put-temp))))
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
@@ -257,7 +257,7 @@ Otherwise use `symbol-overlay-temp-face' as the face."
       (overlay-put ov 'face 'symbol-overlay-temp-face)
       (overlay-put ov 'symbol ""))))
 
-(defun symbol-overlay-put-all (symbol &optional scope keyword)
+(defun symbol-overlay-put-all (symbol scope &optional keyword)
   "Put overlays on all occurrences of SYMBOL in the buffer.
 The background color is randomly picked from `symbol-overlay-colors'.
 If SCOPE is non-nil, put overlays only on occurrences in scope.
@@ -294,7 +294,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 	   (count (length before)))
       (message (concat (substring symbol 3 -3)
 		       ": %d/%d"
-		       (and keyword (cadr keyword) " in scope")
+		       (and (cadr keyword) " in scope")
 		       (and show-color (format " (%s)" (cddr keyword))))
 	       (+ count 1)
 	       (+ count (length after))))))
@@ -307,11 +307,14 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol)))
       (if keyword
-	  (progn
+          (if (symbol-overlay-maybe-reput symbol keyword)
+              (symbol-overlay-count keyword)
 	    (symbol-overlay-remove keyword)
-	    (symbol-overlay-put-temp-in-window))
+	    (symbol-overlay-put-temp))
 	(and (looking-at-p "\\_>") (backward-char))
-	(symbol-overlay-count (symbol-overlay-put-all symbol) t)))))
+	(symbol-overlay-count
+         (symbol-overlay-put-all symbol symbol-overlay-scope)
+         t)))))
 
 ;;;###autoload
 (defun symbol-overlay-remove-all ()
@@ -338,15 +341,27 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
   (interactive)
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
-	   (keyword (symbol-overlay-assoc symbol))
-	   (scope (not (cadr keyword))))
-      (symbol-overlay-count (symbol-overlay-put-all symbol scope keyword)))))
+	   (keyword (symbol-overlay-assoc symbol)))
+      (if keyword
+          (let ((scope (not (cadr keyword))))
+            (symbol-overlay-count (symbol-overlay-put-all symbol scope keyword))
+            (setq symbol-overlay-scope scope))
+        (setq symbol-overlay-scope (not symbol-overlay-scope))))))
+
+(defun symbol-overlay-maybe-reput (&optional symbol keyword)
+  (let* ((symbol (or symbol (symbol-overlay-get-symbol)))
+         (keyword (or keyword (symbol-overlay-assoc symbol))))
+    (unless (seq-find #'(lambda (ov)
+                          (string= (overlay-get ov 'symbol) symbol))
+                      (overlays-at (car (bounds-of-thing-at-point 'symbol))))
+      (symbol-overlay-put-all symbol t keyword))))
 
 ;;;###autoload
 (defun symbol-overlay-echo-mark ()
   "Jump back to the mark."
   (interactive)
-  (let ((pt (mark))) (and pt (goto-char pt))))
+  (let ((pt (mark))) (and pt (goto-char pt)))
+  (symbol-overlay-maybe-reput))
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
@@ -355,12 +370,13 @@ DIR must be 1 or -1."
     (let* ((symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol)))
       (push-mark nil t)
-      (save-restriction
-	(symbol-overlay-narrow (cadr keyword))
-	(funcall jump-function symbol dir)
-	(if keyword (symbol-overlay-count keyword)
-	  (symbol-overlay-mode)
-	  (symbol-overlay-put-temp-in-window))))))
+      (funcall jump-function symbol dir)
+      (if keyword
+          (progn
+            (symbol-overlay-maybe-reput symbol keyword)
+            (symbol-overlay-count keyword))
+        (symbol-overlay-mode)
+        (symbol-overlay-put-temp)))))
 
 (defun symbol-overlay-basic-jump (symbol dir)
   "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
@@ -483,7 +499,7 @@ DIR must be 1 or -1."
     (let* ((case-fold-search nil)
 	   (symbol (symbol-overlay-get-symbol))
 	   (keyword (symbol-overlay-assoc symbol))
-	   (scope (cadr keyword))
+	   (scope (if keyword (cadr keyword) symbol-overlay-scope))
 	   txt new)
       (beginning-of-thing 'symbol)
       (push-mark nil t)
