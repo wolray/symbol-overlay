@@ -9,6 +9,10 @@ Highlight symbols with overlays while providing a keymap for various operations 
 What's New!
 ---
 
+### 20170826:
+
+`symbol-overlay-toggle-in-scope` now affects both global and in-scope highlighting. `symbol-overlay-rename` now uses the original symbol name as the initial text in minibuffer. New command `symbol-overlay-count` for counting symbol at point. And other improvements.
+
 ### 20170426:
 
 Minor-mode `symbol-overlay-mode` for auto-highlighting is now enabled.
@@ -81,3 +85,10 @@ Default key-bindings defined in `symbol-overlay-map`:
 You can re-bind the commands to any keys you prefer by simply writing
 
     (define-key symbol-overlay-map (kbd "your-prefer-key") 'any-command)
+
+Or you may prefer to overwrite the keymap
+
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "key1") 'command-1)
+      (define-key map (kbd "key2") 'command-2)
+      (setq symbol-overlay-map map))
