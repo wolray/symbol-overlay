@@ -520,14 +520,16 @@ DIR must be 1 or -1."
                              (substring symbol 3 -3))
 	    new (symbol-overlay-get-symbol txt))
       (unless (string= new symbol)
-	(symbol-overlay-maybe-remove (symbol-overlay-assoc new))
-	(save-excursion
-	  (save-restriction
-	    (symbol-overlay-narrow scope)
-	    (goto-char (point-min))
-	    (let ((inhibit-modification-hooks t))
-	      (while (re-search-forward symbol nil t) (replace-match txt t)))))
-	(setq keyword (symbol-overlay-put-all new scope keyword)))
+        (let ((prev-overlay (symbol-overlay-assoc new)))
+	  (symbol-overlay-maybe-remove prev-overlay)
+	  (save-excursion
+	    (save-restriction
+	      (symbol-overlay-narrow scope)
+	      (goto-char (point-min))
+	      (let ((inhibit-modification-hooks t))
+	        (while (re-search-forward symbol nil t) (replace-match txt t)))))
+          (when prev-overlay
+	    (setq keyword (symbol-overlay-put-all new scope keyword)))))
       (when (string= new (symbol-overlay-get-symbol nil t))
 	(symbol-overlay-maybe-count keyword)))))
 
