@@ -249,8 +249,7 @@ This only effects symbols in the current displayed window."
 If COLOR is non-nil, use it as the overlay face's background color.
 Otherwise use `symbol-overlay-temp-face' as the face."
   (let ((ov (make-overlay (match-beginning 0) (match-end 0))))
-    (if color (progn (overlay-put ov 'face `((:background ,color)
-					     (:foreground "black")))
+    (if color (progn (overlay-put ov 'face `(:background ,color :foreground "black"))
 		     (overlay-put ov 'keymap symbol-overlay-map)
 		     (overlay-put ov 'evaporate t)
 		     (overlay-put ov 'symbol symbol))
