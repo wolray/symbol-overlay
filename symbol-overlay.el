@@ -490,7 +490,7 @@ DIR must be 1 or -1."
       (and scope (user-error "Query-replace invalid in scope"))
       (beginning-of-thing 'symbol)
       (push-mark nil t)
-      (setq txt (read-string "Replacement: ")
+      (setq txt (read-string "Replacement: " (substring symbol 3 -3))
 	    new (symbol-overlay-get-symbol txt)
 	    defaults (cons symbol txt))
       (unless (string= new symbol)
