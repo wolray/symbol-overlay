@@ -130,8 +130,7 @@
                                   symbol-overlay-face-8)
   "Faces used for overlays."
   :type '(repeat face)
-  :group 'symbol-overlay
-  )
+  :group 'symbol-overlay)
 
 (defcustom symbol-overlay-colors
   '("dodger blue"
@@ -145,8 +144,7 @@
   "Colors used for overlays' background.
 You can add more colors whatever you like."
   :type '(repeat string)
-  :group 'symbol-overlay
-  )
+  :group 'symbol-overlay)
 
 (defcustom symbol-overlay-idle-time 0.5
   "Idle time after every command and before the temporary highlighting."
