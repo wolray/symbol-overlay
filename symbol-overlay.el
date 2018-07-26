@@ -159,8 +159,8 @@ This is an association list that maps a MAJOR-MODE symbol to a
 function that determines whether a symbol should be ignored. For
 instance, such a function could use a major mode's font-lock
 definitions to prevent a language's keywords from getting highlighted."
-  :group 'symbol-overlay)
-;; todo: add :type
+  :group 'symbol-overlay
+  :type '(repeat (cons (function :tag "Mode") function)))
 
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
