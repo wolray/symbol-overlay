@@ -138,7 +138,9 @@
   :type 'float)
 
 (defcustom symbol-overlay-ignore-functions
-  '((python-mode . symbol-overlay-ignore-function-python))
+ '((c-mode . symbol-overlay-ignore-function-c)
+   (c++-mode . symbol-overlay-ignore-function-c++)
+   (python-mode . symbol-overlay-ignore-function-python))
   "Functions to determine whether a symbol should be ignored.
 
 This is an association list that maps a MAJOR-MODE symbol to a
@@ -350,6 +352,39 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 		       (and show-color (format " (%s)" (cddr keyword))))
 	       (+ count 1)
 	       (+ count (length after))))))
+
+(defvar c-font-lock-extra-types)
+(defun symbol-overlay-ignore-function-c (symbol)
+  "Determine whether SYMBOL should be ignored (C Language)."
+  (let ((keywords (append c-font-lock-extra-types
+                  '("auto" "break" "case" "char" "const" "continue"
+                    "default" "do" "double" "else" "enum" "extern"
+                    "float" "for" "goto" "if" "inline" "int" "long"
+                    "register" "restrict" "return" "short" "signed"
+                    "sizeof" "static" "struct" "switch" "typedef"
+                    "union" "unsigned" "void" "volatile" "while"))))
+    (string-match-p (concat "\\_<\\(" (mapconcat 'identity keywords "\\|") "\\)\\_>") symbol)))
+
+(defvar c++-font-lock-extra-types)
+(defun symbol-overlay-ignore-function-c++ (symbol)
+  "Determine whether SYMBOL should be ignored (C++)."
+  (let ((keywords (append c++-font-lock-extra-types
+                  '("alignas" "alignof" "asm" "auto" "bool" "break"
+                    "case" "catch" "char" "char16_t" "char32_t" "class"
+                    "const" "const_cast" "constexpr" "continue"
+                    "decltype" "default" "delete" "do" "double"
+                    "dynamic_cast" "else" "enum" "explicit" "export"
+                    "extern" "false" "final" "float" "for" "friend"
+                    "goto" "if" "inline" "int" "long" "mutable"
+                    "namespace" "new" "noexcept" "nullptr" "operator"
+                    "override" "private" "protected" "public" "register"
+                    "reinterpret_cast" "return" "short" "signed"
+                    "sizeof" "static" "static_assert" "static_cast"
+                    "struct" "switch" "template" "this" "thread_local"
+                    "throw" "true" "try" "typedef" "typeid" "typename"
+                    "union" "unsigned" "using" "virtual" "void"
+                    "volatile" "wchar_t" "while"))))
+    (string-match-p (concat "\\_<\\(" (mapconcat 'identity keywords "\\|") "\\)\\_>") symbol)))
 
 (defvar python-font-lock-keywords)
 (defun symbol-overlay-ignore-function-python (symbol)
