@@ -389,7 +389,11 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 (defvar python-font-lock-keywords)
 (defun symbol-overlay-ignore-function-python (symbol)
   "Determine whether SYMBOL should be ignored (Python)."
-  (string-match-p (car python-font-lock-keywords) symbol))
+  (let* ((keyword-symbol (car python-font-lock-keywords))
+         (keyword (if (stringp keyword-symbol)
+                      keyword-symbol
+                    (symbol-name keyword-symbol))))
+    (string-match-p keyword symbol)))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
