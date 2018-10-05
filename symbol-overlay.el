@@ -77,6 +77,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'thingatpt)
 (require 'seq)
 
@@ -138,9 +139,10 @@
   :type 'float)
 
 (defcustom symbol-overlay-ignore-functions
- '((c-mode . symbol-overlay-ignore-function-c)
-   (c++-mode . symbol-overlay-ignore-function-c++)
-   (python-mode . symbol-overlay-ignore-function-python))
+  '((c-mode . symbol-overlay-ignore-function-c)
+    (c++-mode . symbol-overlay-ignore-function-c++)
+    (python-mode . symbol-overlay-ignore-function-python)
+    (go-mode . symbol-overlay-ignore-function-go))
   "Functions to determine whether a symbol should be ignored.
 
 This is an association list that maps a MAJOR-MODE symbol to a
@@ -394,6 +396,17 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
                       keyword-symbol
                     (symbol-name keyword-symbol))))
     (string-match-p keyword symbol)))
+
+(defvar go-builtins)
+(defvar go-constants)
+(defvar go-mode-keywords)
+(defun symbol-overlay-ignore-function-go (symbol)
+  "Determine whether SYMBOL should be ignored (Go)."
+  ;; Remove \_< and \_> so we can string compare with keywords
+  (let ((symbol (substring symbol 3 -3) ))
+    (or (cl-find symbol go-builtins :test #'string=)
+        (cl-find symbol go-constants :test #'string=)
+        (cl-find symbol go-mode-keywords :test #'string=))))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
