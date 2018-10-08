@@ -355,38 +355,47 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 	       (+ count 1)
 	       (+ count (length after))))))
 
+(defun symbol-overlay-match-keyword-list (symbol keywords)
+  "Return non-nil is SYMBOL is among KEYWORDS.
+KEYWORDS is a list of strings.  SYMBOL is expected to include
+leading \\< and trailing \\>, as per the return value of
+`symbol-overlay-get-symbol'."
+  (cl-find (substring symbol 3 -3) keywords :test #'string=))
+
 (defvar c-font-lock-extra-types)
 (defun symbol-overlay-ignore-function-c (symbol)
   "Determine whether SYMBOL should be ignored (C Language)."
-  (let ((keywords (append c-font-lock-extra-types
-                  '("auto" "break" "case" "char" "const" "continue"
-                    "default" "do" "double" "else" "enum" "extern"
-                    "float" "for" "goto" "if" "inline" "int" "long"
-                    "register" "restrict" "return" "short" "signed"
-                    "sizeof" "static" "struct" "switch" "typedef"
-                    "union" "unsigned" "void" "volatile" "while"))))
-    (string-match-p (concat "\\_<\\(" (mapconcat 'identity keywords "\\|") "\\)\\_>") symbol)))
+  (symbol-overlay-match-keyword-list
+   symbol
+   (append c-font-lock-extra-types
+           '("auto" "break" "case" "char" "const" "continue"
+             "default" "do" "double" "else" "enum" "extern"
+             "float" "for" "goto" "if" "inline" "int" "long"
+             "register" "restrict" "return" "short" "signed"
+             "sizeof" "static" "struct" "switch" "typedef"
+             "union" "unsigned" "void" "volatile" "while"))))
 
 (defvar c++-font-lock-extra-types)
 (defun symbol-overlay-ignore-function-c++ (symbol)
   "Determine whether SYMBOL should be ignored (C++)."
-  (let ((keywords (append c++-font-lock-extra-types
-                  '("alignas" "alignof" "asm" "auto" "bool" "break"
-                    "case" "catch" "char" "char16_t" "char32_t" "class"
-                    "const" "const_cast" "constexpr" "continue"
-                    "decltype" "default" "delete" "do" "double"
-                    "dynamic_cast" "else" "enum" "explicit" "export"
-                    "extern" "false" "final" "float" "for" "friend"
-                    "goto" "if" "inline" "int" "long" "mutable"
-                    "namespace" "new" "noexcept" "nullptr" "operator"
-                    "override" "private" "protected" "public" "register"
-                    "reinterpret_cast" "return" "short" "signed"
-                    "sizeof" "static" "static_assert" "static_cast"
-                    "struct" "switch" "template" "this" "thread_local"
-                    "throw" "true" "try" "typedef" "typeid" "typename"
-                    "union" "unsigned" "using" "virtual" "void"
-                    "volatile" "wchar_t" "while"))))
-    (string-match-p (concat "\\_<\\(" (mapconcat 'identity keywords "\\|") "\\)\\_>") symbol)))
+  (symbol-overlay-match-keyword-list
+   symbol
+   (append c++-font-lock-extra-types
+           '("alignas" "alignof" "asm" "auto" "bool" "break"
+             "case" "catch" "char" "char16_t" "char32_t" "class"
+             "const" "const_cast" "constexpr" "continue"
+             "decltype" "default" "delete" "do" "double"
+             "dynamic_cast" "else" "enum" "explicit" "export"
+             "extern" "false" "final" "float" "for" "friend"
+             "goto" "if" "inline" "int" "long" "mutable"
+             "namespace" "new" "noexcept" "nullptr" "operator"
+             "override" "private" "protected" "public" "register"
+             "reinterpret_cast" "return" "short" "signed"
+             "sizeof" "static" "static_assert" "static_cast"
+             "struct" "switch" "template" "this" "thread_local"
+             "throw" "true" "try" "typedef" "typeid" "typename"
+             "union" "unsigned" "using" "virtual" "void"
+             "volatile" "wchar_t" "while"))))
 
 (defvar python-font-lock-keywords)
 (defun symbol-overlay-ignore-function-python (symbol)
@@ -403,10 +412,9 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 (defun symbol-overlay-ignore-function-go (symbol)
   "Determine whether SYMBOL should be ignored (Go)."
   ;; Remove \_< and \_> so we can string compare with keywords
-  (let ((symbol (substring symbol 3 -3) ))
-    (or (cl-find symbol go-builtins :test #'string=)
-        (cl-find symbol go-constants :test #'string=)
-        (cl-find symbol go-mode-keywords :test #'string=))))
+  (or (symbol-overlay-match-keyword-list symbol go-builtins)
+      (symbol-overlay-match-keyword-list symbol go-constants)
+      (symbol-overlay-match-keyword-list symbol go-mode-keywords)))
 
 ;;;###autoload
 (defun symbol-overlay-put ()
