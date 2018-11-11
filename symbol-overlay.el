@@ -86,40 +86,49 @@
   :group 'convenience)
 
 (defface symbol-overlay-default-face
-  '((t (:inherit 'highlight)))
-  "Symbol Overlay default face")
+  '((t (:inherit highlight)))
+  "Symbol Overlay default face"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-1
   '((t (:background "dodger blue" :foreground "black")))
-  "Symbol Overlay default candidate 1")
+  "Symbol Overlay default candidate 1"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-2
   '((t (:background "hot pink" :foreground "black")))
-  "Symbol Overlay default candidate 2")
+  "Symbol Overlay default candidate 2"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-3
   '((t (:background "yellow" :foreground "black")))
-  "Symbol Overlay default candidate 3")
+  "Symbol Overlay default candidate 3"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-4
   '((t (:background "orchid" :foreground "black")))
-  "Symbol Overlay default candidate 4")
+  "Symbol Overlay default candidate 4"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-5
   '((t (:background "red" :foreground "black")))
-  "Symbol Overlay default candidate 5")
+  "Symbol Overlay default candidate 5"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-6
   '((t (:background "salmon" :foreground "black")))
-  "Symbol Overlay default candidate 6")
+  "Symbol Overlay default candidate 6"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-7
   '((t (:background "spring green" :foreground "black")))
-  "Symbol Overlay default candidate 7")
+  "Symbol Overlay default candidate 7"
+  :group 'symbol-overlay)
 
 (defface symbol-overlay-face-8
   '((t (:background "turquoise" :foreground "black")))
-  "Symbol Overlay default candidate 8")
+  "Symbol Overlay default candidate 8"
+  :group 'symbol-overlay)
 
 (defcustom symbol-overlay-faces '(symbol-overlay-face-1
                                   symbol-overlay-face-2
