@@ -164,6 +164,7 @@ definitions to prevent a language's keywords from getting highlighted."
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'symbol-overlay-put)
+    (define-key map (kbd "h") 'symbol-overlay-map-help)
     (define-key map (kbd "n") 'symbol-overlay-jump-next)
     (define-key map (kbd "p") 'symbol-overlay-jump-prev)
     (define-key map (kbd "w") 'symbol-overlay-save-symbol)
@@ -178,6 +179,14 @@ definitions to prevent a language's keywords from getting highlighted."
 You can re-bind the commands to any keys you prefer.")
 
 (defvar-local symbol-overlay-keywords-alist nil)
+
+(defun symbol-overlay-map-help ()
+  "Display the bindings in `symbol-overlay-map'."
+  (interactive)
+  (let ((buf (get-buffer-create "*Help*")))
+    (with-help-window "*Help*"
+      (with-current-buffer buf
+        (insert (substitute-command-keys "\\{symbol-overlay-map}"))))))
 
 ;;;###autoload
 (define-minor-mode symbol-overlay-mode
