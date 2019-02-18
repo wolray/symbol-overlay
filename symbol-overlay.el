@@ -85,6 +85,8 @@
   "Highlight symbols with keymap-enabled overlays."
   :group 'convenience)
 
+;;; Faces
+
 (defface symbol-overlay-default-face
   '((t (:inherit highlight)))
   "Symbol Overlay default face"
@@ -130,6 +132,8 @@
   "Symbol Overlay default candidate 8"
   :group 'symbol-overlay)
 
+;;; Options
+
 (defcustom symbol-overlay-faces '(symbol-overlay-face-1
                                   symbol-overlay-face-2
                                   symbol-overlay-face-3
@@ -160,6 +164,8 @@ instance, such a function could use a major mode's font-lock
 definitions to prevent a language's keywords from getting highlighted."
   :group 'symbol-overlay
   :type '(repeat (cons (function :tag "Mode") function)))
+
+;;; Internal
 
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
@@ -380,6 +386,8 @@ leading \\< and trailing \\>, as per the return value of
 `symbol-overlay-get-symbol'."
   (cl-find (substring symbol 3 -3) keywords :test #'string=))
 
+;;; Language-Specific Ignore
+
 (defvar c-font-lock-extra-types)
 (defun symbol-overlay-ignore-function-c (symbol)
   "Determine whether SYMBOL should be ignored (C Language)."
@@ -433,6 +441,8 @@ leading \\< and trailing \\>, as per the return value of
   (or (symbol-overlay-match-keyword-list symbol go-builtins)
       (symbol-overlay-match-keyword-list symbol go-constants)
       (symbol-overlay-match-keyword-list symbol go-mode-keywords)))
+
+;;; Commands
 
 ;;;###autoload
 (defun symbol-overlay-put ()
@@ -664,6 +674,8 @@ DIR must be 1 or -1."
           (setq keyword (symbol-overlay-put-all new scope keyword))))
       (when (string= new (symbol-overlay-get-symbol nil t))
 	(symbol-overlay-maybe-count keyword)))))
+
+;;; Internal
 
 (defun symbol-overlay-refresh (beg end len)
   "Refresh overlays.  Installed on `after-change-functions'.
