@@ -185,6 +185,7 @@ definitions to prevent a language's keywords from getting highlighted."
 You can re-bind the commands to any keys you prefer.")
 
 (defvar-local symbol-overlay-keywords-alist nil)
+(put 'symbol-overlay-keywords-alist 'permanent-local t)
 
 (defun symbol-overlay-map-help ()
   "Display the bindings in `symbol-overlay-map'."
@@ -416,6 +417,14 @@ BEG, END and LEN are the beginning, end and length of changed text."
 
 (add-hook 'after-change-functions 'symbol-overlay-refresh)
 
+(defun symbol-overlay-after-revert ()
+  "Restore overlays after the buffer was reverted."
+  (save-restriction
+    (widen)
+    (symbol-overlay-refresh (point-min) (point-max) nil)))
+
+(add-hook 'after-revert-hook 'symbol-overlay-after-revert)
+
 ;;; Language-Specific Ignore
 
 (defvar c-font-lock-extra-types)
@@ -502,11 +511,14 @@ BEG, END and LEN are the beginning, end and length of changed text."
 
 ;;;###autoload
 (defun symbol-overlay-remove-all ()
-  "Remove all highlighted symbols in the buffer."
+  "Remove all highlighted symbols in the buffer.
+When called interactively, then also reset
+`symbol-overlay-keywords-alist'."
   (interactive)
   (unless (minibufferp)
     (mapc 'delete-overlay (symbol-overlay-get-list))
-    (setq symbol-overlay-keywords-alist nil)))
+    (when (called-interactively-p 'any)
+      (setq symbol-overlay-keywords-alist nil))))
 
 (add-hook 'before-revert-hook 'symbol-overlay-remove-all)
 
