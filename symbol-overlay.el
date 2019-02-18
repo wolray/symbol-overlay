@@ -386,6 +386,36 @@ leading \\< and trailing \\>, as per the return value of
 `symbol-overlay-get-symbol'."
   (cl-find (substring symbol 3 -3) keywords :test #'string=))
 
+(defun symbol-overlay-refresh (beg end len)
+  "Refresh overlays.  Installed on `after-change-functions'.
+BEG, END and LEN are the beginning, end and length of changed text."
+  (unless (or (minibufferp)
+              (not (or symbol-overlay-keywords-alist
+                       symbol-overlay-temp-symbol)))
+    (let ((case-fold-search nil)
+          (re "\\(\\sw\\|\\s_\\)+"))
+      (save-excursion
+        (save-match-data
+          (goto-char end)
+          (and (looking-at-p re)
+               (setq end (re-search-forward "\\_>")))
+          (goto-char beg)
+          (and (not (looking-at-p "\\_<"))
+               (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
+               (setq beg (re-search-backward "\\_<")))
+          (mapc #'(lambda (ov)
+                    (and (overlay-get ov 'symbol)
+                         (delete-overlay ov)))
+                (overlays-in beg end))
+          (mapc #'(lambda (keyword)
+                    (let ((symbol (car keyword)))
+                      (goto-char beg)
+                      (while (re-search-forward symbol end t)
+                        (symbol-overlay-put-one symbol (cddr keyword)))))
+                symbol-overlay-keywords-alist))))))
+
+(add-hook 'after-change-functions 'symbol-overlay-refresh)
+
 ;;; Language-Specific Ignore
 
 (defvar c-font-lock-extra-types)
@@ -674,38 +704,6 @@ DIR must be 1 or -1."
           (setq keyword (symbol-overlay-put-all new scope keyword))))
       (when (string= new (symbol-overlay-get-symbol nil t))
         (symbol-overlay-maybe-count keyword)))))
-
-;;; Internal
-
-(defun symbol-overlay-refresh (beg end len)
-  "Refresh overlays.  Installed on `after-change-functions'.
-BEG, END and LEN are the beginning, end and length of changed text."
-  (unless (or (minibufferp)
-              (not (or symbol-overlay-keywords-alist
-                       symbol-overlay-temp-symbol)))
-    (let ((case-fold-search nil)
-          (re "\\(\\sw\\|\\s_\\)+"))
-      (save-excursion
-        (save-match-data
-          (goto-char end)
-          (and (looking-at-p re)
-               (setq end (re-search-forward "\\_>")))
-          (goto-char beg)
-          (and (not (looking-at-p "\\_<"))
-               (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
-               (setq beg (re-search-backward "\\_<")))
-          (mapc #'(lambda (ov)
-                    (and (overlay-get ov 'symbol)
-                         (delete-overlay ov)))
-                (overlays-in beg end))
-          (mapc #'(lambda (keyword)
-                    (let ((symbol (car keyword)))
-                      (goto-char beg)
-                      (while (re-search-forward symbol end t)
-                        (symbol-overlay-put-one symbol (cddr keyword)))))
-                symbol-overlay-keywords-alist))))))
-
-(add-hook 'after-change-functions 'symbol-overlay-refresh)
 
 ;;; _
 (provide 'symbol-overlay)
