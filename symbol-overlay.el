@@ -707,6 +707,7 @@ BEG, END and LEN are the beginning, end and length of changed text."
 
 (add-hook 'after-change-functions 'symbol-overlay-refresh)
 
+;;; _
 (provide 'symbol-overlay)
 
 ;;; symbol-overlay.el ends here
