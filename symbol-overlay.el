@@ -146,6 +146,11 @@
   :type '(repeat face)
   :group 'symbol-overlay)
 
+(defcustom symbol-overlay-displayed-window t
+  "See `symbol-overlay-maybe-put-temp'."
+  :group 'symbol-overlay
+  :type 'boolean)
+
 (defcustom symbol-overlay-idle-time 0.5
   "Idle time after every command and before the temporary highlighting."
   :group 'symbol-overlay
@@ -159,8 +164,8 @@
   "Functions to determine whether a symbol should be ignored.
 
 This is an association list that maps a MAJOR-MODE symbol to a
-function that determines whether a symbol should be ignored. For
-instance, such a function could use a major mode's font-lock
+function that determines whether a symbol should be ignored.
+For instance, such a function could use a major mode's font-lock
 definitions to prevent a language's keywords from getting highlighted."
   :group 'symbol-overlay
   :type '(repeat (cons (function :tag "Mode") function)))
@@ -283,7 +288,8 @@ depending on SCOPE and WINDOW."
 
 (defun symbol-overlay-maybe-put-temp ()
   "Highlight symbol at point when there are more than 2 occurrences.
-This only effects symbols in the current displayed window."
+This only effects symbols in the current displayed window if
+`symbol-overlay-displayed-window' is non-nil."
   (when symbol-overlay-mode
     (let* ((case-fold-search nil)
            (symbol (symbol-overlay-get-symbol nil t))
@@ -294,7 +300,8 @@ This only effects symbols in the current displayed window."
         (symbol-overlay-remove-temp)
         (save-excursion
           (save-restriction
-            (symbol-overlay-narrow symbol-overlay-scope t)
+            (symbol-overlay-narrow symbol-overlay-scope
+                                   symbol-overlay-displayed-window)
             (goto-char (point-min))
             (re-search-forward symbol nil t)
             (save-match-data
