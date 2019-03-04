@@ -9,6 +9,10 @@ Highlight symbols with overlays while providing a keymap for various operations 
 What's New!
 ---
 
+### 20190305:
+
+New customizable variable `symbol-overlay-displayed-window` is introduced to control the overlay behavior at `symbol-overlay-mode`. If it is non-nil, occurrences outside the displayed window will not be counted or highlighted.
+
 ### 20170826:
 
 `symbol-overlay-toggle-in-scope` now affects both global and in-scope highlighting. `symbol-overlay-rename` now uses the original symbol name as the initial text in minibuffer. New command `symbol-overlay-count` for counting symbol at point. And other improvements.
