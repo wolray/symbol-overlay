@@ -11,7 +11,7 @@ What's New!
 
 ### 20190306:
 
-New command `symbol-overlay-jump-first` and `symbol-overlay-jump-last` are now enabled.
+New commands `symbol-overlay-jump-first` and `symbol-overlay-jump-last` are now enabled.
 
 ### 20190305:
 
