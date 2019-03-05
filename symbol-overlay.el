@@ -211,12 +211,13 @@ You can re-bind the commands to any keys you prefer.")
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
-(defun symbol-overlay-get-list (&optional symbol car-or-cdr exclude)
+(defun symbol-overlay-get-list (dir &optional symbol exclude)
   "Get all highlighted overlays in the buffer.
 If SYMBOL is non-nil, get the overlays that belong to it.
-CAR-OR-CDR must a symbol whose value is 'car or 'cdr, if not nil.
+DIR is an integer.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
-  (let ((lists (progn (overlay-recenter (point)) (overlay-lists))))
+  (let ((lists (progn (overlay-recenter (point)) (overlay-lists)))
+        (func (if (> dir 0) 'cdr (if (< dir 0) 'car nil))))
     (seq-filter
      '(lambda (ov)
         (let ((value (overlay-get ov 'symbol)))
@@ -224,7 +225,7 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
                (or (not symbol)
                    (if (string= value symbol) (not exclude)
                      (and exclude (not (string= value ""))))))))
-     (if car-or-cdr (funcall car-or-cdr lists)
+     (if func (funcall func lists)
        (append (car lists) (cdr lists))))))
 
 (defun symbol-overlay-get-symbol (&optional string noerror)
@@ -242,7 +243,7 @@ If NOERROR is non-nil, just return nil when no symbol is found."
 (defun symbol-overlay-maybe-remove (keyword)
   "Delete the KEYWORD list and all its overlays."
   (when keyword
-    (mapc 'delete-overlay (symbol-overlay-get-list (car keyword)))
+    (mapc 'delete-overlay (symbol-overlay-get-list 0 (car keyword)))
     (setq symbol-overlay-keywords-alist
           (delq keyword symbol-overlay-keywords-alist))
     (cddr keyword)))
@@ -283,7 +284,7 @@ depending on SCOPE and WINDOW."
 
 (defun symbol-overlay-remove-temp ()
   "Delete all temporary overlays."
-  (mapc 'delete-overlay (symbol-overlay-get-list ""))
+  (mapc 'delete-overlay (symbol-overlay-get-list 0 ""))
   (setq symbol-overlay-temp-symbol nil))
 
 (defun symbol-overlay-maybe-put-temp ()
@@ -377,8 +378,8 @@ If KEYWORD is non-nil, remove it then use its color on new overlays."
 If SHOW-COLOR is non-nil, display the color used by current overlay."
   (when keyword
     (let* ((symbol (car keyword))
-           (before (symbol-overlay-get-list symbol 'car))
-           (after (symbol-overlay-get-list symbol 'cdr))
+           (before (symbol-overlay-get-list -1 symbol))
+           (after (symbol-overlay-get-list 1 symbol))
            (count (length before)))
       (message (concat (substring symbol 3 -3)
                        ": %d/%d"
@@ -390,7 +391,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 (defun symbol-overlay-match-keyword-list (symbol keywords)
   "Return non-nil is SYMBOL is among KEYWORDS.
 KEYWORDS is a list of strings.  SYMBOL is expected to include
-leading \\< and trailing \\>, as per the return value of
+leading \\_< and trailing \\_>, as the return value of
 `symbol-overlay-get-symbol'."
   (cl-find (substring symbol 3 -3) keywords :test #'string=))
 
@@ -497,15 +498,19 @@ BEG, END and LEN are the beginning, end and length of changed text."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
            (keyword (symbol-overlay-assoc symbol)))
+      (symbol-overlay-adjust-position)
       (if keyword
           (if (symbol-overlay-maybe-reput symbol keyword)
               (symbol-overlay-maybe-count keyword)
             (symbol-overlay-maybe-remove keyword)
             (symbol-overlay-maybe-put-temp))
-        (and (looking-at-p "\\_>") (backward-char))
         (symbol-overlay-maybe-count
          (symbol-overlay-put-all symbol symbol-overlay-scope)
          t)))))
+
+(defun symbol-overlay-adjust-position ()
+  "Backward one char if at the end of the symbol."
+  (when (looking-at-p "\\_>") (backward-char)))
 
 ;;;###autoload
 (defun symbol-overlay-count ()
@@ -514,6 +519,7 @@ BEG, END and LEN are the beginning, end and length of changed text."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
            (keyword (symbol-overlay-assoc symbol)))
+      (symbol-overlay-adjust-position)
       (symbol-overlay-maybe-count keyword))))
 
 ;;;###autoload
@@ -523,7 +529,7 @@ When called interactively, then also reset
 `symbol-overlay-keywords-alist'."
   (interactive)
   (unless (minibufferp)
-    (mapc 'delete-overlay (symbol-overlay-get-list))
+    (mapc 'delete-overlay (symbol-overlay-get-list 0))
     (when (called-interactively-p 'any)
       (setq symbol-overlay-keywords-alist nil))))
 
@@ -547,7 +553,8 @@ When called interactively, then also reset
            (keyword (symbol-overlay-assoc symbol)))
       (if keyword
           (let ((scope (not (cadr keyword))))
-            (symbol-overlay-maybe-count (symbol-overlay-put-all symbol scope keyword))
+            (symbol-overlay-maybe-count
+             (symbol-overlay-put-all symbol scope keyword))
             (setq symbol-overlay-scope scope))
         (setq symbol-overlay-scope (not symbol-overlay-scope))))))
 
@@ -573,7 +580,7 @@ KEYWORD provides the scope information."
 
 (defun symbol-overlay-jump-call (jump-function dir)
   "A general jumping process during which JUMP-FUNCTION is called to jump.
-DIR must be 1 or -1."
+DIR must be non-zero."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
            (keyword (symbol-overlay-assoc symbol)))
@@ -584,7 +591,8 @@ DIR must be 1 or -1."
         (symbol-overlay-maybe-count keyword)))))
 
 (defun symbol-overlay-basic-jump (symbol dir)
-  "Jump to SYMBOL's next location in the direction DIR.  DIR must be 1 or -1."
+  "Jump to SYMBOL's next location in the direction DIR.
+DIR must be non-zero."
   (let* ((case-fold-search nil)
          (bounds (bounds-of-thing-at-point 'symbol))
          (offset (- (point) (if (> dir 0) (cdr bounds) (car bounds))))
@@ -600,13 +608,35 @@ DIR must be 1 or -1."
 (defun symbol-overlay-jump-next ()
   "Jump to the next location of symbol at point."
   (interactive)
+  (symbol-overlay-adjust-position)
   (symbol-overlay-jump-call 'symbol-overlay-basic-jump 1))
 
 ;;;###autoload
 (defun symbol-overlay-jump-prev ()
   "Jump to the previous location of symbol at point."
   (interactive)
+  (symbol-overlay-adjust-position)
   (symbol-overlay-jump-call 'symbol-overlay-basic-jump -1))
+
+;;;###autoload
+(defun symbol-overlay-jump-first ()
+  "Jump to the first location."
+  (interactive)
+  (symbol-overlay-adjust-position)
+  (let* ((symbol (symbol-overlay-get-symbol))
+         (before (symbol-overlay-get-list -1 symbol))
+         (count (length before)))
+    (symbol-overlay-jump-call 'symbol-overlay-basic-jump (- count))))
+
+;;;###autoload
+(defun symbol-overlay-jump-last ()
+  "Jump to the last location."
+  (interactive)
+  (symbol-overlay-adjust-position)
+  (let* ((symbol (symbol-overlay-get-symbol))
+         (after (symbol-overlay-get-list 1 symbol))
+         (count (length after)))
+    (symbol-overlay-jump-call 'symbol-overlay-basic-jump (- count 1))))
 
 (defvar-local symbol-overlay-definition-function
   '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
@@ -638,7 +668,7 @@ with the input symbol."
 DIR must be 1 or -1."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol nil t))
-           (list (symbol-overlay-get-list symbol (if (> dir 0) 'cdr 'car) t)))
+           (list (symbol-overlay-get-list dir symbol t)))
       (or list
           (user-error (concat "No more "
                               (if (> dir 0) "forward" "backward")
