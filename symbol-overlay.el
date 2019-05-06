@@ -382,7 +382,9 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
     (let* ((symbol (car keyword))
            (before (symbol-overlay-get-list -1 symbol))
            (after (symbol-overlay-get-list 1 symbol))
-           (count (length before)))
+           (count (length before))
+           ;; Log to echo area but not *Messages*
+           message-log-max)
       (message (concat (substring symbol 3 -3)
                        ": %d/%d"
                        (and (cadr keyword) " in scope")
