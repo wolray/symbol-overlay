@@ -152,7 +152,9 @@
   :type 'boolean)
 
 (defcustom symbol-overlay-idle-time 0.5
-  "Idle time after every command and before the temporary highlighting."
+  "Idle time after every command and before the temporary highlighting.
+
+If nil highlighting is instant"
   :group 'symbol-overlay
   :type 'float)
 
@@ -209,7 +211,8 @@ You can re-bind the commands to any keys you prefer.")
   (if symbol-overlay-mode
       (progn
         (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
-        (symbol-overlay-update-timer symbol-overlay-idle-time))
+        (when symbol-overlay-idle-time
+          (symbol-overlay-update-timer symbol-overlay-idle-time)))
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
@@ -334,7 +337,9 @@ This only effects symbols in the current displayed window if
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
   (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
-    (symbol-overlay-remove-temp)))
+    (symbol-overlay-remove-temp)
+    (unless symbol-overlay-idle-time
+      (symbol-overlay-maybe-put-temp))))
 
 (defun symbol-overlay-put-one (symbol &optional face)
   "Put overlay on current occurrence of SYMBOL after a match.
