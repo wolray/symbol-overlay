@@ -154,7 +154,8 @@
 (defcustom symbol-overlay-idle-time 0.5
   "Idle time after every command and before the temporary highlighting.
 
-If nil highlighting is instant"
+If nil highlighting is instant but you have to set it to nil before 
+enabling `symbol-overlay-mode' for it to work properly"
   :group 'symbol-overlay
   :type 'float)
 
