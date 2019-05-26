@@ -274,15 +274,7 @@ depending on SCOPE and WINDOW."
                        max (progn (forward-paragraph) (point))))
           (narrow-to-region min max)))
     (when window
-      (let ((lines (round (window-screen-lines)))
-            (pt (point))
-            beg)
-        (save-excursion
-          (forward-line (- lines))
-          (setq beg (point))
-          (goto-char pt)
-          (forward-line lines)
-          (narrow-to-region beg (point)))))))
+      (narrow-to-region (window-start) (window-end)))))
 
 (defun symbol-overlay-remove-temp ()
   "Delete all temporary overlays."
