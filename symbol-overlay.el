@@ -156,9 +156,8 @@
   :group 'symbol-overlay
   :type 'float)
 
-(defcustom symbol-overlay-cursor-hook
-  '(lambda (window oldpos entered-or-left) '())
-  "A function that is put in the cursor-sensor-functions on every overlay."
+(defcustom symbol-overlay-overlay-created-functions '()
+  "Functions called after overlay creation that may modify the overlay."
   :group 'symbol-overlay
   :type 'hook)
 
@@ -342,12 +341,11 @@ Otherwise apply `symbol-overlay-default-face'."
     (if face (progn (overlay-put ov 'face face)
                     (overlay-put ov 'keymap symbol-overlay-map)
                     (overlay-put ov 'evaporate t)
-                    (overlay-put ov 'symbol symbol)
-                    (overlay-put ov
-                                 'cursor-sensor-functions
-                                 `(,symbol-overlay-cursor-hook)))
+                    (overlay-put ov 'symbol symbol))
       (overlay-put ov 'face 'symbol-overlay-default-face)
-      (overlay-put ov 'symbol ""))))
+      (overlay-put ov 'symbol ""))
+    (dolist (fun symbol-overlay-overlay-created-functions)
+      (funcall fun ov))))
 
 (defun symbol-overlay-put-all (symbol scope &optional keyword)
   "Put overlays on all occurrences of SYMBOL in the buffer.
