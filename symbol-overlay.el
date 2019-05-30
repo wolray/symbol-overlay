@@ -156,6 +156,12 @@
   :group 'symbol-overlay
   :type 'float)
 
+(defcustom symbol-overlay-cursor-hook
+  '(lambda (window oldpos entered-or-left) '())
+  "A function that is put in the cursor-sensor-functions on every overlay."
+  :group 'symbol-overlay
+  :type 'hook)
+
 (defcustom symbol-overlay-ignore-functions
   '((c-mode . symbol-overlay-ignore-function-c)
     (c++-mode . symbol-overlay-ignore-function-c++)
@@ -336,7 +342,10 @@ Otherwise apply `symbol-overlay-default-face'."
     (if face (progn (overlay-put ov 'face face)
                     (overlay-put ov 'keymap symbol-overlay-map)
                     (overlay-put ov 'evaporate t)
-                    (overlay-put ov 'symbol symbol))
+                    (overlay-put ov 'symbol symbol)
+                    (overlay-put ov
+                                 'cursor-sensor-functions
+                                 `(,symbol-overlay-cursor-hook)))
       (overlay-put ov 'face 'symbol-overlay-default-face)
       (overlay-put ov 'symbol ""))))
 
