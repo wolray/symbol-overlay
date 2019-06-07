@@ -238,6 +238,12 @@ If NOERROR is non-nil, just return nil when no symbol is found."
     (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
       (unless noerror (user-error "No symbol at point")))))
 
+(defun symbol-overlay-get-symbol-raw (&optional string noerror)
+  "Like `symbol-overlay-get-symbol', but return the raw string of symbol."
+  (let ((symbol (or string (thing-at-point 'symbol))))
+    (or symbol
+        (unless noerror (user-error "No symbol at point")))))
+
 (defun symbol-overlay-assoc (symbol)
   "Get SYMBOL's associated list in `symbol-overlay-keywords-alist'."
   (assoc symbol symbol-overlay-keywords-alist))
@@ -735,7 +741,7 @@ DIR must be 1 or -1."
       (beginning-of-thing 'symbol)
       (push-mark nil t)
       (setq txt (read-string (concat "Rename" (and scope " in scope") ": ")
-                             (substring symbol 3 -3))
+                             (symbol-overlay-get-symbol-raw))
             new (symbol-overlay-get-symbol txt))
       (unless (string= new symbol)
         (symbol-overlay-maybe-remove (symbol-overlay-assoc new))
