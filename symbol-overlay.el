@@ -56,7 +56,7 @@
 ;; `symbol-overlay-toggle-in-scope'
 ;; Jump back to the position before a recent jump: `symbol-overlay-echo-mark'
 ;; Jump to the definition of symbol at point: `symbol-overlay-jump-to-definition'
-;; Isearch symbol at point literally, without `regexp-quote' the symbol:
+;; Isearch symbol at point literally:
 ;; `symbol-overlay-isearch-literally'
 ;; Query replace symbol at point: `symbol-overlay-query-replace'
 ;; Rename symbol at point on all its occurrences: `symbol-overlay-rename'
@@ -230,13 +230,15 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
      (if func (funcall func lists)
        (append (car lists) (cdr lists))))))
 
-(defun symbol-overlay-get-symbol (&optional string noerror)
+(defun symbol-overlay-get-symbol (&optional noerror)
   "Get the symbol at point.
-If STRING is non-nil, `regexp-quote' STRING rather than the symbol.
 If NOERROR is non-nil, just return nil when no symbol is found."
-  (let ((symbol (or string (thing-at-point 'symbol))))
-    (if symbol (concat "\\_<" (regexp-quote symbol) "\\_>")
-      (unless noerror (user-error "No symbol at point")))))
+  (or (thing-at-point 'symbol)
+      (unless noerror (user-error "No symbol at point"))))
+
+(defun symbol-overlay-regexp (symbol)
+  "Return a regexp to match SYMBOL."
+  (concat "\\_<" (regexp-quote symbol) "\\_>"))
 
 (defun symbol-overlay-assoc (symbol)
   "Get SYMBOL's associated list in `symbol-overlay-keywords-alist'."
@@ -287,7 +289,7 @@ This only effects symbols in the current displayed window if
 `symbol-overlay-displayed-window' is non-nil."
   (when symbol-overlay-mode
     (let* ((case-fold-search nil)
-           (symbol (symbol-overlay-get-symbol nil t))
+           (symbol (symbol-overlay-get-symbol t))
            p)
       (when (and symbol
                  (not (symbol-overlay-assoc symbol))
@@ -298,14 +300,15 @@ This only effects symbols in the current displayed window if
             (symbol-overlay-narrow symbol-overlay-scope
                                    symbol-overlay-displayed-window)
             (goto-char (point-min))
-            (re-search-forward symbol nil t)
-            (save-match-data
-              (while (re-search-forward symbol nil t)
+            (let ((re (symbol-overlay-regexp symbol)))
+              (re-search-forward re nil t)
+              (save-match-data
+                (while (re-search-forward re nil t)
+                  (symbol-overlay-put-one symbol)
+                  (or p (setq p t))))
+              (when p
                 (symbol-overlay-put-one symbol)
-                (or p (setq p t))))
-            (when p
-              (symbol-overlay-put-one symbol)
-              (setq symbol-overlay-temp-symbol symbol))))))))
+                (setq symbol-overlay-temp-symbol symbol)))))))))
 
 (defun symbol-overlay-ignored-p (symbol)
   "Determine whether SYMBOL should be temporarily highlighted."
@@ -325,7 +328,7 @@ This only effects symbols in the current displayed window if
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
+  (unless (string= (symbol-overlay-get-symbol t) symbol-overlay-temp-symbol)
     (symbol-overlay-remove-temp)))
 
 (defun symbol-overlay-put-one (symbol &optional face)
@@ -361,8 +364,9 @@ If KEYWORD is non-nil, remove it then use its color on new overlays."
       (save-restriction
         (symbol-overlay-narrow scope)
         (goto-char (point-min))
-        (while (re-search-forward symbol nil t)
-          (symbol-overlay-put-one symbol face))))
+        (let ((re (symbol-overlay-regexp symbol)))
+          (while (re-search-forward re nil t)
+            (symbol-overlay-put-one symbol face)))))
     (setq keyword `(,symbol ,scope . ,face))
     (push keyword symbol-overlay-keywords-alist)
     keyword))
@@ -377,7 +381,7 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
            (count (length before))
            ;; Log to echo area but not *Messages*
            message-log-max)
-      (message (concat (substring symbol 3 -3)
+      (message (concat symbol
                        ": %d/%d"
                        (and (cadr keyword) " in scope")
                        (and show-color (format " (%s)" (cddr keyword))))
@@ -386,10 +390,9 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
 
 (defun symbol-overlay-match-keyword-list (symbol keywords)
   "Return non-nil is SYMBOL is among KEYWORDS.
-KEYWORDS is a list of strings.  SYMBOL is expected to include
-leading \\_< and trailing \\_>, as the return value of
-`symbol-overlay-get-symbol'."
-  (cl-find (substring symbol 3 -3) keywords :test #'string=))
+KEYWORDS is a list of strings.  SYMBOL is expected to be a return
+value of `symbol-overlay-get-symbol'."
+  (cl-find symbol keywords :test #'string=))
 
 (defun symbol-overlay-refresh (beg end len)
   "Refresh overlays.  Installed on `after-change-functions'.
@@ -413,9 +416,10 @@ BEG, END and LEN are the beginning, end and length of changed text."
                          (delete-overlay ov)))
                 (overlays-in beg end))
           (mapc #'(lambda (keyword)
-                    (let ((symbol (car keyword)))
+                    (let* ((symbol (car keyword))
+                           (re (symbol-overlay-regexp symbol)))
                       (goto-char beg)
-                      (while (re-search-forward symbol end t)
+                      (while (re-search-forward re end t)
                         (symbol-overlay-put-one symbol (cddr keyword)))))
                 symbol-overlay-keywords-alist))))))
 
@@ -592,12 +596,13 @@ DIR must be non-zero."
   (let* ((case-fold-search nil)
          (bounds (bounds-of-thing-at-point 'symbol))
          (offset (- (point) (if (> dir 0) (cdr bounds) (car bounds))))
-         target)
+         target
+         (re (symbol-overlay-regexp symbol)))
     (goto-char (- (point) offset))
-    (setq target (re-search-forward symbol nil t dir))
+    (setq target (re-search-forward re nil t dir))
     (unless target
       (goto-char (if (> dir 0) (point-min) (point-max)))
-      (setq target (re-search-forward symbol nil nil dir)))
+      (setq target (re-search-forward re nil nil dir)))
     (goto-char (+ target offset))))
 
 ;;;###autoload
@@ -635,7 +640,7 @@ DIR must be non-zero."
     (symbol-overlay-jump-call 'symbol-overlay-basic-jump (- count 1))))
 
 (defvar-local symbol-overlay-definition-function
-  '(lambda (symbol) (concat "(?def[a-z-]* " symbol))
+  '(lambda (symbol) (concat "(?def[a-z-]* " (symbol-overlay-regexp symbol)))
   "An one-argument function that returns a regexp.")
 
 ;;;###autoload
@@ -663,7 +668,7 @@ with the input symbol."
   "Switch to the closest symbol highlighted nearby, in the direction DIR.
 DIR must be 1 or -1."
   (unless (minibufferp)
-    (let* ((symbol (symbol-overlay-get-symbol nil t))
+    (let* ((symbol (symbol-overlay-get-symbol t))
            (list (symbol-overlay-get-list dir symbol t)))
       (or list
           (user-error (concat "No more "
@@ -688,13 +693,13 @@ DIR must be 1 or -1."
 
 ;;;###autoload
 (defun symbol-overlay-isearch-literally ()
-  "Isearch symbol at point literally, without `regexp-quote' the symbol."
+  "Isearch symbol at point literally."
   (interactive)
   (unless (minibufferp)
     (let ((symbol (symbol-overlay-get-symbol)))
       (beginning-of-thing 'symbol)
       (isearch-forward nil t)
-      (isearch-yank-string (substring symbol 3 -3)))))
+      (isearch-yank-string symbol))))
 
 ;;;###autoload
 (defun symbol-overlay-query-replace ()
@@ -705,20 +710,19 @@ DIR must be 1 or -1."
            (symbol (symbol-overlay-get-symbol))
            (keyword (symbol-overlay-assoc symbol))
            (scope (cadr keyword))
-           txt defaults new)
+           defaults new)
       (and scope (user-error "Query-replace invalid in scope"))
       (beginning-of-thing 'symbol)
       (push-mark nil t)
-      (setq txt (read-string "Replacement: " (substring symbol 3 -3))
-            new (symbol-overlay-get-symbol txt)
-            defaults (cons symbol txt))
+      (setq new (read-string "Replacement: " symbol)
+            defaults (cons symbol new))
       (unless (string= new symbol)
         (symbol-overlay-maybe-remove (symbol-overlay-assoc new))
         (setq keyword (symbol-overlay-put-all new scope keyword))
-        (query-replace-regexp symbol txt)
+        (query-replace-regexp (symbol-overlay-regexp symbol) new)
         (setq query-replace-defaults
               (if (< emacs-major-version 25) `,defaults `(,defaults))))
-      (when (string= new (symbol-overlay-get-symbol nil t))
+      (when (string= new (symbol-overlay-get-symbol t))
         (beginning-of-thing 'symbol)
         (symbol-overlay-maybe-count keyword)))))
 
@@ -731,23 +735,23 @@ DIR must be 1 or -1."
            (symbol (symbol-overlay-get-symbol))
            (keyword (symbol-overlay-assoc symbol))
            (scope (if keyword (cadr keyword) symbol-overlay-scope))
-           txt new)
+           new)
       (beginning-of-thing 'symbol)
       (push-mark nil t)
-      (setq txt (read-string (concat "Rename" (and scope " in scope") ": ")
-                             (substring symbol 3 -3))
-            new (symbol-overlay-get-symbol txt))
+      (setq new (read-string (concat "Rename" (and scope " in scope") ": ")
+                             symbol))
       (unless (string= new symbol)
         (symbol-overlay-maybe-remove (symbol-overlay-assoc new))
         (save-excursion
           (save-restriction
             (symbol-overlay-narrow scope)
             (goto-char (point-min))
-            (let ((inhibit-modification-hooks t))
-              (while (re-search-forward symbol nil t) (replace-match txt t)))))
+            (let ((inhibit-modification-hooks t)
+                  (re (symbol-overlay-regexp symbol)))
+              (while (re-search-forward re nil t) (replace-match new t)))))
         (when keyword
           (setq keyword (symbol-overlay-put-all new scope keyword))))
-      (when (string= new (symbol-overlay-get-symbol nil t))
+      (when (string= new (symbol-overlay-get-symbol t))
         (symbol-overlay-maybe-count keyword)))))
 
 ;;; _
