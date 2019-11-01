@@ -160,6 +160,7 @@
   '((c-mode . symbol-overlay-ignore-function-c)
     (c++-mode . symbol-overlay-ignore-function-c++)
     (python-mode . symbol-overlay-ignore-function-python)
+    (java-mode . symbol-overlay-ignore-function-java)
     (go-mode . symbol-overlay-ignore-function-go))
   "Functions to determine whether a symbol should be ignored.
 
@@ -488,6 +489,22 @@ BEG, END and LEN are the beginning, end and length of changed text."
   (or (symbol-overlay-match-keyword-list symbol go-builtins)
       (symbol-overlay-match-keyword-list symbol go-constants)
       (symbol-overlay-match-keyword-list symbol go-mode-keywords)))
+
+;; From https://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html
+(defun symbol-overlay-ignore-function-java (symbol)
+  "Determine whether SYMBOL should be ignored (Java)."
+  (symbol-overlay-match-keyword-list
+   symbol
+   '("abstract" "continue" "for"         "new"       "switch"
+     "assert"   "default"  "goto"        "package"   "synchronized"
+     "boolean"  "do"       "if"          "private"   "this"
+     "break"    "double"   "implements"  "protected" "throw"
+     "byte"     "else"     "import"      "public"    "throws"
+     "case"     "enum"      "instanceof" "return"    "transient"
+     "catch"    "extends"   "int"        "short"     "try"
+     "char"     "final"     "interface"  "static"    "void"
+     "class"    "finally"   "long"       "strictfp"  "volatile"
+     "const*"   "float"     "native"     "super"     "while")))
 
 ;;; Commands
 
