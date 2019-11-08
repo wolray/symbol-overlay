@@ -173,6 +173,13 @@ definitions to prevent a language's keywords from getting highlighted."
 
 ;;; Internal
 
+(defvar-local symbol-overlay-inhibit-map nil
+  "When non-nil, don't use `symbol-overlay-map'.
+This is intended for buffers/modes that use the keymap text
+property for their own purposes.  Because this package uses
+overlays it would always override the text property keymaps
+of such packages.")
+
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'symbol-overlay-put)
@@ -338,7 +345,8 @@ If FACE is non-nil, use it as the overlay’s face.
 Otherwise apply `symbol-overlay-default-face'."
   (let ((ov (make-overlay (match-beginning 0) (match-end 0))))
     (if face (progn (overlay-put ov 'face face)
-                    (overlay-put ov 'keymap symbol-overlay-map)
+                    (unless symbol-overlay-inhibit-map
+                      (overlay-put ov 'keymap symbol-overlay-map))
                     (overlay-put ov 'evaporate t)
                     (overlay-put ov 'symbol symbol))
       (overlay-put ov 'face 'symbol-overlay-default-face)
