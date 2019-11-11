@@ -156,6 +156,11 @@
   :group 'symbol-overlay
   :type 'float)
 
+(defcustom symbol-overlay-overlay-created-functions '()
+  "Functions called after overlay creation that may modify the overlay."
+  :group 'symbol-overlay
+  :type 'hook)
+
 (defcustom symbol-overlay-ignore-functions
   '((c-mode . symbol-overlay-ignore-function-c)
     (c++-mode . symbol-overlay-ignore-function-c++)
@@ -342,7 +347,9 @@ Otherwise apply `symbol-overlay-default-face'."
                     (overlay-put ov 'evaporate t)
                     (overlay-put ov 'symbol symbol))
       (overlay-put ov 'face 'symbol-overlay-default-face)
-      (overlay-put ov 'symbol ""))))
+      (overlay-put ov 'symbol ""))
+    (dolist (fun symbol-overlay-overlay-created-functions)
+      (funcall fun ov))))
 
 (defun symbol-overlay-put-all (symbol scope &optional keyword)
   "Put overlays on all occurrences of SYMBOL in the buffer.
