@@ -178,12 +178,13 @@ definitions to prevent a language's keywords from getting highlighted."
 
 ;;; Internal
 
-(defvar-local symbol-overlay-inhibit-map nil
+(defvar symbol-overlay-inhibit-map nil
   "When non-nil, don't use `symbol-overlay-map'.
 This is intended for buffers/modes that use the keymap text
 property for their own purposes.  Because this package uses
 overlays it would always override the text property keymaps
 of such packages.")
+(put 'symbol-overlay-inhibit-map 'safe-local-variable 'booleanp)
 
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
