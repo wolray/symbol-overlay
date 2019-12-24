@@ -771,7 +771,7 @@ DIR must be 1 or -1."
            new)
       (beginning-of-thing 'symbol)
       (push-mark nil t)
-      (setq new (read-string (concat "Rename" (and scope " in scope") ": ")
+      (setq new (read-string (concat "Rename" (and scope " in scope") " to: ")
                              symbol))
       (unless (string= new symbol)
         (symbol-overlay-maybe-remove (symbol-overlay-assoc new))
