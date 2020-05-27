@@ -100,3 +100,6 @@ Or you may prefer to overwrite the keymap
       (define-key map (kbd "key1") 'command-1)
       (define-key map (kbd "key2") 'command-2)
       (setq symbol-overlay-map map))
+ 
+As a final example, you can define a handy set of keys using `transient`:
+see the snippet posted [here](https://github.com/wolray/symbol-overlay/issues/59).
