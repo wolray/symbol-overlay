@@ -398,10 +398,10 @@ If SHOW-COLOR is non-nil, display the color used by current overlay."
            (count (length before))
            ;; Log to echo area but not *Messages*
            message-log-max)
-      (message (concat symbol
-                       ": %d/%d"
+      (message (concat "%s: %d/%d"
                        (and (cadr keyword) " in scope")
                        (and show-color (format " (%s)" (cddr keyword))))
+               symbol
                (+ count 1)
                (+ count (length after))))))
 
