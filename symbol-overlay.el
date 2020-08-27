@@ -338,7 +338,12 @@ This only effects symbols in the current displayed window if
   (and symbol-overlay-timer (cancel-timer symbol-overlay-timer))
   (setq symbol-overlay-timer
         (and value (> value 0)
-             (run-with-idle-timer value t 'symbol-overlay-maybe-put-temp))))
+             (run-with-idle-timer
+              value t
+              (lambda (buf)
+                (with-current-buffer buf
+                  (symbol-overlay-maybe-put-temp)))
+              (current-buffer)))))
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
