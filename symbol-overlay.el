@@ -341,8 +341,9 @@ This only effects symbols in the current displayed window if
              (run-with-idle-timer
               value t
               (lambda (buf)
-                (with-current-buffer buf
-                  (symbol-overlay-maybe-put-temp)))
+                (when (buffer-live-p buf)
+                  (with-current-buffer buf
+                    (symbol-overlay-maybe-put-temp))))
               (current-buffer)))))
 
 (defun symbol-overlay-post-command ()
