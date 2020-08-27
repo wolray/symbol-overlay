@@ -225,6 +225,7 @@ You can re-bind the commands to any keys you prefer.")
         (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
         (symbol-overlay-update-timer symbol-overlay-idle-time))
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
+    (symbol-overlay-cancel-timer)
     (symbol-overlay-remove-temp)))
 
 (defun symbol-overlay-get-list (dir &optional symbol exclude)
@@ -330,12 +331,17 @@ This only effects symbols in the current displayed window if
     (when f
       (funcall f symbol))))
 
-(defvar symbol-overlay-timer nil
+(defvar-local symbol-overlay-timer nil
   "Timer for temporary highlighting.")
+
+(defun symbol-overlay-cancel-timer ()
+  "Cancel `symbol-overlay-timer' if it is running."
+  (when symbol-overlay-timer
+    (cancel-timer symbol-overlay-timer)))
 
 (defun symbol-overlay-update-timer (value)
   "Update `symbol-overlay-timer' with new idle-time VALUE."
-  (and symbol-overlay-timer (cancel-timer symbol-overlay-timer))
+  (symbol-overlay-cancel-timer)
   (setq symbol-overlay-timer
         (and value (> value 0)
              (run-with-idle-timer
