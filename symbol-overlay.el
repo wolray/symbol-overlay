@@ -290,7 +290,7 @@ depending on SCOPE and WINDOW."
           (and p (setq min (progn (backward-paragraph) (point))
                        max (progn (forward-paragraph) (point))))
           (narrow-to-region min max)))
-    (when window
+    (when (and window (eq (window-buffer) (current-buffer)))
       (narrow-to-region (window-start) (window-end)))))
 
 (defun symbol-overlay-remove-temp ()
@@ -300,7 +300,7 @@ depending on SCOPE and WINDOW."
 
 (defun symbol-overlay-maybe-put-temp ()
   "Highlight symbol at point when there are more than 2 occurrences.
-This only effects symbols in the current displayed window if
+This only affects symbols in the current displayed window if
 `symbol-overlay-displayed-window' is non-nil."
   (when symbol-overlay-mode
     (let* ((case-fold-search nil)
