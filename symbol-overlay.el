@@ -151,6 +151,12 @@
   :group 'symbol-overlay
   :type 'boolean)
 
+(defcustom symbol-overlay-temp-highlight-single nil
+  "When non-nil, also apply temporary highlighting to symbols
+that occur only once."
+  :group 'symbol-overlay
+  :type 'boolean)
+
 (defcustom symbol-overlay-idle-time 0.5
   "Idle time after every command and before the temporary highlighting."
   :group 'symbol-overlay
@@ -321,7 +327,7 @@ This only affects symbols in the current displayed window if
                 (while (re-search-forward re nil t)
                   (symbol-overlay-put-one symbol)
                   (or p (setq p t))))
-              (when p
+              (when (or symbol-overlay-temp-highlight-single p)
                 (symbol-overlay-put-one symbol)
                 (setq symbol-overlay-temp-symbol symbol)))))))))
 
