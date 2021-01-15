@@ -539,7 +539,6 @@ BEG, END and LEN are the beginning, end and length of changed text."
      "const*"   "float"     "native"     "super"     "while")))
 
 (defvar clojure-font-lock-extra-keywords)
-;; From : (map str (keys (ns-publics 'clojure.core)))
 (defun symbol-overlay-ignore-function-clojure (symbol)
   "Determine whether SYMBOL should be ignored (clojure)."
   (symbol-overlay-match-keyword-list
