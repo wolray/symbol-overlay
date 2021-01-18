@@ -166,8 +166,7 @@
     (c++-mode . symbol-overlay-ignore-function-c++)
     (python-mode . symbol-overlay-ignore-function-python)
     (java-mode . symbol-overlay-ignore-function-java)
-    (go-mode . symbol-overlay-ignore-function-go)
-    (clojure-mode . symbol-overlay-ignore-function-clojure))
+    (go-mode . symbol-overlay-ignore-function-go))
   "Functions to determine whether a symbol should be ignored.
 
 This is an association list that maps a MAJOR-MODE symbol to a
@@ -537,14 +536,6 @@ BEG, END and LEN are the beginning, end and length of changed text."
      "char"     "final"     "interface"  "static"    "void"
      "class"    "finally"   "long"       "strictfp"  "volatile"
      "const*"   "float"     "native"     "super"     "while")))
-
-(defvar clojure-font-lock-extra-keywords)
-(defun symbol-overlay-ignore-function-clojure (symbol)
-  "Determine whether SYMBOL should be ignored (clojure)."
-  (symbol-overlay-match-keyword-list
-   symbol
-   (append clojure-font-lock-extra-keywords
-           '("defn" "def" "let" "deftest" "is"))))
 
 ;;; Commands
 
