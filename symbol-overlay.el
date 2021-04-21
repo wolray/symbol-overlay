@@ -216,10 +216,14 @@ You can re-bind the commands to any keys you prefer.")
       (with-current-buffer buf
         (insert (substitute-command-keys "\\{symbol-overlay-map}"))))))
 
+(defvar symbol-overlay-mode-map (make-sparse-keymap)
+  "Keymap for `symbol-overlay-mode'.")
+
 ;;;###autoload
 (define-minor-mode symbol-overlay-mode
   "Minor mode for auto-highlighting symbol at point."
-  nil " SO" (make-sparse-keymap)
+  :lighter " SO"
+  :keymap symbol-overlay-mode-map
   (if symbol-overlay-mode
       (progn
         (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
