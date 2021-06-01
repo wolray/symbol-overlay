@@ -166,7 +166,8 @@
     (c++-mode . symbol-overlay-ignore-function-c++)
     (python-mode . symbol-overlay-ignore-function-python)
     (java-mode . symbol-overlay-ignore-function-java)
-    (go-mode . symbol-overlay-ignore-function-go))
+    (go-mode . symbol-overlay-ignore-function-go)
+    (SAS-mode . symbol-overlay-ignore-function-sas))
   "Functions to determine whether a symbol should be ignored.
 
 This is an association list that maps a MAJOR-MODE symbol to a
@@ -540,6 +541,19 @@ BEG, END and LEN are the beginning, end and length of changed text."
      "char"     "final"     "interface"  "static"    "void"
      "class"    "finally"   "long"       "strictfp"  "volatile"
      "const*"   "float"     "native"     "super"     "while")))
+
+(defun symbol-overlay-ignore-function-sas (symbol)
+  "Determine whether SYMBOL should be ignored (SAS Language)."
+  (symbol-overlay-match-keyword-list
+   symbol
+   '("array" "by" "compare" "compress" "contents" "create" "data"
+     "delete" "do" "drop" "else" "end" "find" "format" "from" "group"
+     "having" "if" "in" "index" "join" "keep" "label" "left" "length"
+     "libname" "max" "mean" "means" "merge" "min" "missing" "on"
+     "options" "order" "out" "proc" "put" "quit" "random" "rename"
+     "retain" "return" "right" "run" "select" "set" "sort" "sql" "sum"
+     "summary" "table" "tables" "then" "union" "var" "value" "when"
+     "where")))
 
 ;;; Commands
 
