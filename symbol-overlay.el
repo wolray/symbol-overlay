@@ -176,6 +176,13 @@ definitions to prevent a language's keywords from getting highlighted."
   :group 'symbol-overlay
   :type '(repeat (cons (function :tag "Mode") function)))
 
+(defcustom symbol-overlay-post-command-enabled t
+  "If non-nil, add ‘symbol-overlay-post-command’ to ‘post-command-hook’.
+Setting this value to nil can result in increased responsiveness while
+editing.  The downside is, temporary highlighting for the symbol at
+point will remain in place after point has moved off of the symbol,
+until it moves onto another symbol.")
+
 ;;; Internal
 
 (defvar symbol-overlay-inhibit-map nil
@@ -226,7 +233,8 @@ You can re-bind the commands to any keys you prefer.")
   :keymap symbol-overlay-mode-map
   (if symbol-overlay-mode
       (progn
-        (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+        (when symbol-overlay-post-command-enabled
+          (add-hook 'post-command-hook 'symbol-overlay-post-command nil t))
         (symbol-overlay-update-timer symbol-overlay-idle-time))
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-cancel-timer)
