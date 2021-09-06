@@ -227,6 +227,7 @@ You can re-bind the commands to any keys you prefer.")
   (if symbol-overlay-mode
       (progn
         (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+        (add-hook 'kill-buffer-hook 'symbol-overlay-cancel-timer)
         (symbol-overlay-update-timer symbol-overlay-idle-time))
     (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
     (symbol-overlay-cancel-timer)
