@@ -342,21 +342,18 @@ This only affects symbols in the current displayed window if
   (when symbol-overlay-timer
     (cancel-timer symbol-overlay-timer)))
 
-(defun symbol-overlay-idle-timer (buf)
-  "Idle timer callback for BUF.
-This is used to maybe highlight the symbol at point, but only if
-the buffer is visible in the currently-selected window at the
-time."
-  (when (and (buffer-live-p buf) (eq (window-buffer) buf))
-    (with-current-buffer buf
-      (symbol-overlay-maybe-put-temp))))
+(defun symbol-overlay-idle-timer ()
+  "Idle timer callback.
+This is used to maybe highlight the symbol at point in whichever
+buffer happens to be current when the timer is fired."
+  (symbol-overlay-maybe-put-temp))
 
 (defun symbol-overlay-update-timer (value)
   "Update `symbol-overlay-timer' with new idle-time VALUE."
   (symbol-overlay-cancel-timer)
   (setq symbol-overlay-timer
         (and value (> value 0)
-             (run-with-idle-timer value t #'symbol-overlay-idle-timer (current-buffer)))))
+             (run-with-idle-timer value t #'symbol-overlay-idle-timer))))
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
