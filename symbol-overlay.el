@@ -1,4 +1,4 @@
-;;; symbol-overlay.el --- Highlight symbols with keymap-enabled overlays
+;;; symbol-overlay.el --- Highlight symbols with keymap-enabled overlays -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2017 wolray
 
@@ -188,19 +188,19 @@ of such packages.")
 
 (defvar symbol-overlay-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "i") 'symbol-overlay-put)
-    (define-key map (kbd "h") 'symbol-overlay-map-help)
-    (define-key map (kbd "p") 'symbol-overlay-jump-prev)
-    (define-key map (kbd "n") 'symbol-overlay-jump-next)
-    (define-key map (kbd "<") 'symbol-overlay-jump-first)
-    (define-key map (kbd ">") 'symbol-overlay-jump-last)
-    (define-key map (kbd "w") 'symbol-overlay-save-symbol)
-    (define-key map (kbd "t") 'symbol-overlay-toggle-in-scope)
-    (define-key map (kbd "e") 'symbol-overlay-echo-mark)
-    (define-key map (kbd "d") 'symbol-overlay-jump-to-definition)
-    (define-key map (kbd "s") 'symbol-overlay-isearch-literally)
-    (define-key map (kbd "q") 'symbol-overlay-query-replace)
-    (define-key map (kbd "r") 'symbol-overlay-rename)
+    (define-key map (kbd "i") #'symbol-overlay-put)
+    (define-key map (kbd "h") #'symbol-overlay-map-help)
+    (define-key map (kbd "p") #'symbol-overlay-jump-prev)
+    (define-key map (kbd "n") #'symbol-overlay-jump-next)
+    (define-key map (kbd "<") #'symbol-overlay-jump-first)
+    (define-key map (kbd ">") #'symbol-overlay-jump-last)
+    (define-key map (kbd "w") #'symbol-overlay-save-symbol)
+    (define-key map (kbd "t") #'symbol-overlay-toggle-in-scope)
+    (define-key map (kbd "e") #'symbol-overlay-echo-mark)
+    (define-key map (kbd "d") #'symbol-overlay-jump-to-definition)
+    (define-key map (kbd "s") #'symbol-overlay-isearch-literally)
+    (define-key map (kbd "q") #'symbol-overlay-query-replace)
+    (define-key map (kbd "r") #'symbol-overlay-rename)
     map)
   "Keymap automatically activated inside overlays.
 You can re-bind the commands to any keys you prefer.")
@@ -226,10 +226,10 @@ You can re-bind the commands to any keys you prefer.")
   :keymap symbol-overlay-mode-map
   (if symbol-overlay-mode
       (progn
-        (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
-        (add-hook 'kill-buffer-hook 'symbol-overlay-cancel-timer)
+        (add-hook 'post-command-hook #'symbol-overlay-post-command nil t)
+        (add-hook 'kill-buffer-hook #'symbol-overlay-cancel-timer)
         (symbol-overlay-update-timer symbol-overlay-idle-time))
-    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
+    (remove-hook 'post-command-hook #'symbol-overlay-post-command t)
     (symbol-overlay-cancel-timer)
     (symbol-overlay-remove-temp)))
 
@@ -241,12 +241,12 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
   (let ((lists (progn (overlay-recenter (point)) (overlay-lists)))
         (func (if (> dir 0) 'cdr (if (< dir 0) 'car nil))))
     (seq-filter
-     '(lambda (ov)
-        (let ((value (overlay-get ov 'symbol)))
-          (and value
-               (or (not symbol)
-                   (if (string= value symbol) (not exclude)
-                     (and exclude (not (string= value ""))))))))
+     (lambda (ov)
+       (let ((value (overlay-get ov 'symbol)))
+         (and value
+              (or (not symbol)
+                  (if (string= value symbol) (not exclude)
+                    (and exclude (not (string= value ""))))))))
      (if func (funcall func lists)
        (append (car lists) (cdr lists))))))
 
@@ -358,7 +358,7 @@ time."
   (symbol-overlay-cancel-timer)
   (setq symbol-overlay-timer
         (and value (> value 0)
-             (run-with-idle-timer value t 'symbol-overlay-idle-timer (current-buffer)))))
+             (run-with-idle-timer value t #'symbol-overlay-idle-timer (current-buffer)))))
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
@@ -390,8 +390,7 @@ If KEYWORD is non-nil, remove it then use its color on new overlays."
          (face (or (symbol-overlay-maybe-remove keyword)
                    (elt symbol-overlay-faces (random limit))))
          (alist symbol-overlay-keywords-alist)
-         (faces (mapcar 'cddr alist))
-         (pt (point)))
+         (faces (mapcar #'cddr alist)))
     (if (< (length alist) limit)
         (while (seq-position faces face)
           (setq face (elt symbol-overlay-faces (random limit))))
@@ -431,7 +430,7 @@ KEYWORDS is a list of strings.  SYMBOL is expected to be a return
 value of `symbol-overlay-get-symbol'."
   (cl-find symbol keywords :test #'string=))
 
-(defun symbol-overlay-refresh (beg end len)
+(defun symbol-overlay-refresh (beg end _len)
   "Refresh overlays.  Installed on `after-change-functions'.
 BEG, END and LEN are the beginning, end and length of changed text."
   (unless (or (minibufferp)
@@ -448,19 +447,19 @@ BEG, END and LEN are the beginning, end and length of changed text."
           (and (not (looking-at-p "\\_<"))
                (looking-at-p (concat "\\(" re "\\|\\_>\\)"))
                (setq beg (re-search-backward "\\_<")))
-          (mapc #'(lambda (ov)
-                    (and (overlay-get ov 'symbol)
-                         (delete-overlay ov)))
+          (mapc (lambda (ov)
+                  (and (overlay-get ov 'symbol)
+                       (delete-overlay ov)))
                 (overlays-in beg end))
-          (mapc #'(lambda (keyword)
-                    (let* ((symbol (car keyword))
-                           (re (symbol-overlay-regexp symbol)))
-                      (goto-char beg)
-                      (while (re-search-forward re end t)
-                        (symbol-overlay-put-one symbol (cddr keyword)))))
+          (mapc (lambda (keyword)
+                  (let* ((symbol (car keyword))
+                         (re (symbol-overlay-regexp symbol)))
+                    (goto-char beg)
+                    (while (re-search-forward re end t)
+                      (symbol-overlay-put-one symbol (cddr keyword)))))
                 symbol-overlay-keywords-alist))))))
 
-(add-hook 'after-change-functions 'symbol-overlay-refresh)
+(add-hook 'after-change-functions #'symbol-overlay-refresh)
 
 (defun symbol-overlay-after-revert ()
   "Restore overlays after the buffer was reverted."
@@ -468,7 +467,7 @@ BEG, END and LEN are the beginning, end and length of changed text."
     (widen)
     (symbol-overlay-refresh (point-min) (point-max) nil)))
 
-(add-hook 'after-revert-hook 'symbol-overlay-after-revert)
+(add-hook 'after-revert-hook #'symbol-overlay-after-revert)
 
 ;;; Language-Specific Ignore
 
@@ -586,7 +585,7 @@ When called interactively, then also reset
     (when (called-interactively-p 'any)
       (setq symbol-overlay-keywords-alist nil))))
 
-(add-hook 'before-revert-hook 'symbol-overlay-remove-all)
+(add-hook 'before-revert-hook #'symbol-overlay-remove-all)
 
 ;;;###autoload
 (defun symbol-overlay-save-symbol ()
@@ -663,14 +662,14 @@ DIR must be non-zero."
   "Jump to the next location of symbol at point."
   (interactive)
   (symbol-overlay-adjust-position)
-  (symbol-overlay-jump-call 'symbol-overlay-basic-jump 1))
+  (symbol-overlay-jump-call #'symbol-overlay-basic-jump 1))
 
 ;;;###autoload
 (defun symbol-overlay-jump-prev ()
   "Jump to the previous location of symbol at point."
   (interactive)
   (symbol-overlay-adjust-position)
-  (symbol-overlay-jump-call 'symbol-overlay-basic-jump -1))
+  (symbol-overlay-jump-call #'symbol-overlay-basic-jump -1))
 
 ;;;###autoload
 (defun symbol-overlay-jump-first ()
@@ -680,7 +679,7 @@ DIR must be non-zero."
   (let* ((symbol (symbol-overlay-get-symbol))
          (before (symbol-overlay-get-list -1 symbol))
          (count (length before)))
-    (symbol-overlay-jump-call 'symbol-overlay-basic-jump (- count))))
+    (symbol-overlay-jump-call #'symbol-overlay-basic-jump (- count))))
 
 ;;;###autoload
 (defun symbol-overlay-jump-last ()
@@ -690,7 +689,7 @@ DIR must be non-zero."
   (let* ((symbol (symbol-overlay-get-symbol))
          (after (symbol-overlay-get-list 1 symbol))
          (count (length after)))
-    (symbol-overlay-jump-call 'symbol-overlay-basic-jump (- count 1))))
+    (symbol-overlay-jump-call #'symbol-overlay-basic-jump (- count 1))))
 
 (defvar-local symbol-overlay-definition-function
   '(lambda (symbol) (concat "(?def[a-z-]* " (symbol-overlay-regexp symbol)))
