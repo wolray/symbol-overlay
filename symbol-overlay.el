@@ -382,20 +382,16 @@ Otherwise apply `symbol-overlay-default-face'."
 
 (defun symbol-overlay-put-all (symbol scope &optional keyword)
   "Put overlays on all occurrences of SYMBOL in the buffer.
-The face is randomly picked from `symbol-overlay-faces'.
+The face is picked from `symbol-overlay-faces'.
 If SCOPE is non-nil, put overlays only on occurrences in scope.
 If KEYWORD is non-nil, remove it then use its color on new overlays."
   (let* ((case-fold-search nil)
-         (limit (length symbol-overlay-faces))
-         (face (or (symbol-overlay-maybe-remove keyword)
-                   (elt symbol-overlay-faces (random limit))))
-         (alist symbol-overlay-keywords-alist)
-         (faces (mapcar #'cddr alist)))
-    (if (< (length alist) limit)
-        (while (seq-position faces face)
-          (setq face (elt symbol-overlay-faces (random limit))))
-      (setq face (symbol-overlay-maybe-remove (car (last alist)))))
-    (and symbol-overlay-temp-symbol (symbol-overlay-remove-temp))
+         (face (or (car (cl-set-difference
+                         symbol-overlay-faces
+                         (mapcar #'cddr symbol-overlay-keywords-alist)))
+                   ;; If we have exhausted the available faces, then just
+                   ;; keep using the last face for all subsequent symbols.
+                   (car (last symbol-overlay-faces)))))
     (save-excursion
       (save-restriction
         (symbol-overlay-narrow scope)
