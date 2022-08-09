@@ -184,6 +184,11 @@ prioritise `symbol-overlay' relative to `flymake' or other features."
   :group 'symbol-overlay
   :type 'integer)
 
+(defcustom symbol-overlay-jump-hook nil
+  "Hook to run after jumping to a symbol."
+  :group 'symbol-overlay
+  :type 'hook)
+
 ;;; Internal
 
 (defvar symbol-overlay-inhibit-map nil
@@ -647,6 +652,7 @@ DIR must be non-zero."
            (keyword (symbol-overlay-assoc symbol)))
       (push-mark nil t)
       (funcall jump-function symbol dir)
+      (run-hooks 'symbol-overlay-jump-hook)
       (when keyword
         (symbol-overlay-maybe-reput symbol keyword)
         (symbol-overlay-maybe-count keyword)))))
