@@ -245,7 +245,7 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
          (let ((value (overlay-get ov 'symbol))
                (end (overlay-end ov)))
            (and value
-                (if (< dir 0) (< end (point)) t)
+                (or (> dir 0) (< end (point)))
                 (or (not symbol)
                     (if (string= value symbol) (not exclude)
                       (and exclude (not (string= value ""))))))))
