@@ -236,17 +236,20 @@ You can re-bind the commands to any keys you prefer.")
 If SYMBOL is non-nil, get the overlays that belong to it.
 DIR is an integer.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
-  (let ((lists (progn (overlay-recenter (point)) (overlay-lists)))
-        (func (if (> dir 0) 'cdr (if (< dir 0) 'car nil))))
-    (seq-filter
-     (lambda (ov)
-       (let ((value (overlay-get ov 'symbol)))
-         (and value
-              (or (not symbol)
-                  (if (string= value symbol) (not exclude)
-                    (and exclude (not (string= value ""))))))))
-     (if func (funcall func lists)
-       (append (car lists) (cdr lists))))))
+  (if (= dir 0)
+      (overlays-in (point-min) (point-max))
+    (let ((overlays (cond ((< dir 0) (overlays-in (point-min) (point)))
+                          ((> dir 0) (overlays-in (point) (point-max))))))
+      (seq-filter
+       (lambda (ov)
+         (let ((value (overlay-get ov 'symbol))
+               (end (overlay-end ov)))
+           (and value
+                (or (> dir 0) (< end (point)))
+                (or (not symbol)
+                    (if (string= value symbol) (not exclude)
+                      (and exclude (not (string= value ""))))))))
+       overlays))))
 
 (defun symbol-overlay-get-symbol (&optional noerror)
   "Get the symbol at point.
