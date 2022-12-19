@@ -235,21 +235,23 @@ You can re-bind the commands to any keys you prefer.")
   "Get all highlighted overlays in the buffer.
 If SYMBOL is non-nil, get the overlays that belong to it.
 DIR is an integer.
+  If DIR = 0, search the whole buffer;
+  If DIR > 0, search the region after current point (forward), the overlay at current point is included;
+  If DIR < 0, search the region before current point (backward), the overlay at current point is excluded.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
-  (if (= dir 0)
-      (overlays-in (point-min) (point-max))
-    (let ((overlays (cond ((< dir 0) (overlays-in (point-min) (point)))
-                          ((> dir 0) (overlays-in (point) (point-max))))))
-      (seq-filter
-       (lambda (ov)
-         (let ((value (overlay-get ov 'symbol))
-               (end (overlay-end ov)))
-           (and value
-                (or (> dir 0) (< end (point)))
-                (or (not symbol)
-                    (if (string= value symbol) (not exclude)
-                      (and exclude (not (string= value ""))))))))
-       overlays))))
+  (let* ((cur-point (point))
+         (overlays (overlays-in (if (> dir 0) cur-point (point-min))
+                                (if (< dir 0) cur-point (point-max)))))
+    (seq-filter
+     (lambda (ov)
+       (let ((value (overlay-get ov 'symbol)))
+         (and value
+              ;; make sure the backward search does not including the overlay at current point
+              (or (>= dir 0) (< (overlay-end ov) cur-point))
+              (or (not symbol)
+                  (if (string= value symbol) (not exclude)
+                    (and exclude (not (string= value ""))))))))
+     overlays)))
 
 (defun symbol-overlay-get-symbol (&optional noerror)
   "Get the symbol at point.
