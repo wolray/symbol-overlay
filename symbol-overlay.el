@@ -635,9 +635,13 @@ KEYWORD provides the scope information."
 DIR must be non-zero."
   (unless (minibufferp)
     (let* ((symbol (symbol-overlay-get-symbol))
-           (keyword (symbol-overlay-assoc symbol)))
+           (keyword (symbol-overlay-assoc symbol))
+           (scope (if keyword (cadr keyword) symbol-overlay-scope)))
       (push-mark nil t)
-      (funcall jump-function symbol dir)
+      (save-restriction
+        (symbol-overlay-narrow scope)
+        (funcall jump-function symbol dir)
+        )
       (when keyword
         (symbol-overlay-maybe-reput symbol keyword)
         (symbol-overlay-maybe-count keyword)))))
