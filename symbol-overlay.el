@@ -239,7 +239,9 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
   (if (= dir 0)
       (overlays-in (point-min) (point-max))
     (let ((overlays (cond ((< dir 0) (overlays-in (point-min) (point)))
-                          ((> dir 0) (overlays-in (point) (point-max))))))
+                          ((> dir 0) (overlays-in 
+                                      (if (looking-at-p "\\_>") (1- (point)) (point))
+                                      (point-max))))))
       (seq-filter
        (lambda (ov)
          (let ((value (overlay-get ov 'symbol))
