@@ -359,7 +359,8 @@ buffer happens to be current when the timer is fired."
 
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (unless (string= (symbol-overlay-get-symbol t) symbol-overlay-temp-symbol)
+  (unless (or (null symbol-overlay-temp-symbol)
+              (string= (symbol-overlay-get-symbol t) symbol-overlay-temp-symbol))
     (symbol-overlay-remove-temp)))
 
 (defun symbol-overlay-put-one (symbol &optional face)
