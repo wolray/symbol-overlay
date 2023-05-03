@@ -385,6 +385,8 @@ Otherwise apply `symbol-overlay-default-face'."
 The face is randomly picked from `symbol-overlay-faces'.
 If SCOPE is non-nil, put overlays only on occurrences in scope.
 If KEYWORD is non-nil, remove it then use its color on new overlays."
+  (when symbol-overlay-temp-symbol
+    (symbol-overlay-remove-temp))
   (let* ((case-fold-search nil)
          (limit (length symbol-overlay-faces))
          (face (or (symbol-overlay-maybe-remove keyword)
