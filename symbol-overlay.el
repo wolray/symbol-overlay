@@ -388,7 +388,8 @@ If KEYWORD is non-nil, remove it then use its color on new overlays."
   (when symbol-overlay-temp-symbol
     (symbol-overlay-remove-temp))
   (let* ((case-fold-search nil)
-         (face (or (car (cl-set-difference
+         (face (or (symbol-overlay-maybe-remove keyword)
+                   (car (cl-set-difference
                          symbol-overlay-faces
                          (mapcar #'cddr symbol-overlay-keywords-alist)))
                    ;; If we have exhausted the available faces, then just
