@@ -176,6 +176,14 @@ definitions to prevent a language's keywords from getting highlighted."
   :group 'symbol-overlay
   :type '(repeat (cons (function :tag "Mode") function)))
 
+(defcustom symbol-overlay-priority nil
+  "Sets the priority of the overlays to a non-default value.
+When multiple overlays appear at the same point, the one with the
+highest priority receives keystrokes, so with this option you can
+prioritise `symbol-overlay' relative to `flymake' or other features."
+  :group 'symbol-overlay
+  :type 'integer)
+
 ;;; Internal
 
 (defvar symbol-overlay-inhibit-map nil
@@ -377,6 +385,8 @@ Otherwise apply `symbol-overlay-default-face'."
                     (overlay-put ov 'symbol symbol))
       (overlay-put ov 'face 'symbol-overlay-default-face)
       (overlay-put ov 'symbol ""))
+    (when symbol-overlay-priority
+      (overlay-put ov 'priority symbol-overlay-priority))
     (dolist (fun symbol-overlay-overlay-created-functions)
       (funcall fun ov))))
 
