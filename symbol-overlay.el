@@ -633,8 +633,8 @@ When called interactively, then also reset
   "Put overlays on SYMBOL that is not highlighted in scope.
 KEYWORD provides the scope information."
   (when (and (cadr keyword)
-             (not (seq-find #'(lambda (ov)
-                                (string= (overlay-get ov 'symbol) symbol))
+             (not (seq-find (lambda (ov)
+                              (string= (overlay-get ov 'symbol) symbol))
                             (overlays-at
                              (car (bounds-of-thing-at-point 'symbol))))))
     (symbol-overlay-put-all symbol t keyword)))
