@@ -152,8 +152,7 @@
   :type 'boolean)
 
 (defcustom symbol-overlay-temp-highlight-single nil
-  "When non-nil, also apply temporary highlighting to symbols
-that occur only once."
+  "When non-nil, also temporarily highlight symbols that occur only once."
   :group 'symbol-overlay
   :type 'boolean)
 
