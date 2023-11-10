@@ -1,3 +1,7 @@
+[![Melpa Status](http://melpa.org/packages/ibuffer-vc-badge.svg)](http://melpa.org/#/ibuffer-vc)
+[![Melpa Stable Status](http://stable.melpa.org/packages/ibuffer-vc-badge.svg)](http://stable.melpa.org/#/ibuffer-vc)
+[![Build Status](https://github.com/wolray/symbol-overlay/actions/workflows/test.yml/badge.svg)](https://github.com/wolray/symbol-overlay/actions/workflows/test.yml)
+
 # Symbol Overlay
 
 <p align="center">
