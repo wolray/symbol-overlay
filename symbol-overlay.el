@@ -156,6 +156,11 @@
   :group 'symbol-overlay
   :type 'boolean)
 
+(defcustom symbol-overlay-temp-highlight-on-region nil
+  "When non-nil, temporarily highlight region if the region is active."
+  :group 'symbol-overlay
+  :type 'boolean)
+
 (defcustom symbol-overlay-idle-time 0.5
   "Idle time after every command and before the temporary highlighting."
   :group 'symbol-overlay
@@ -270,15 +275,19 @@ If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
                     (and exclude (not (string= value ""))))))))
      overlays)))
 
-(defun symbol-overlay-get-symbol (&optional noerror)
+(defun symbol-overlay-get-symbol (&optional noerror on-region)
   "Get the symbol at point.
 If NOERROR is non-nil, just return nil when no symbol is found."
-  (or (thing-at-point 'symbol)
+  (or (when (and on-region (use-region-p))
+        (buffer-substring-no-properties (use-region-beginning) (use-region-end)))
+      (thing-at-point 'symbol)
       (unless noerror (user-error "No symbol at point"))))
 
-(defun symbol-overlay-regexp (symbol)
+(defun symbol-overlay-regexp (symbol &optional on-region)
   "Return a regexp to match SYMBOL."
-  (concat "\\_<" (regexp-quote symbol) "\\_>"))
+  (if (and on-region (use-region-p))
+      (regexp-quote symbol)
+    (concat "\\_<" (regexp-quote symbol) "\\_>")))
 
 (defun symbol-overlay-assoc (symbol)
   "Get SYMBOL's associated list in `symbol-overlay-keywords-alist'."
@@ -329,7 +338,7 @@ This only affects symbols in the current displayed window if
 `symbol-overlay-displayed-window' is non-nil."
   (when symbol-overlay-mode
     (let* ((case-fold-search nil)
-           (symbol (symbol-overlay-get-symbol t))
+           (symbol (symbol-overlay-get-symbol t symbol-overlay-temp-highlight-on-region))
            p)
       (when (and symbol
                  (not (symbol-overlay-assoc symbol))
@@ -340,7 +349,7 @@ This only affects symbols in the current displayed window if
             (symbol-overlay-narrow symbol-overlay-scope
                                    symbol-overlay-displayed-window)
             (goto-char (point-min))
-            (let ((re (symbol-overlay-regexp symbol)))
+            (let ((re (symbol-overlay-regexp symbol symbol-overlay-temp-highlight-on-region)))
               (re-search-forward re nil t)
               (save-match-data
                 (while (re-search-forward re nil t)
