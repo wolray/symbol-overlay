@@ -1,5 +1,5 @@
-[![Melpa Status](http://melpa.org/packages/ibuffer-vc-badge.svg)](http://melpa.org/#/ibuffer-vc)
-[![Melpa Stable Status](http://stable.melpa.org/packages/ibuffer-vc-badge.svg)](http://stable.melpa.org/#/ibuffer-vc)
+[![Melpa Status](http://melpa.org/packages/symbol-overlay-badge.svg)](http://melpa.org/#/symbol-overlay)
+[![Melpa Stable Status](http://stable.melpa.org/packages/symbol-overlay-badge.svg)](http://stable.melpa.org/#/symbol-overlay)
 [![Build Status](https://github.com/wolray/symbol-overlay/actions/workflows/test.yml/badge.svg)](https://github.com/wolray/symbol-overlay/actions/workflows/test.yml)
 
 # Symbol Overlay
