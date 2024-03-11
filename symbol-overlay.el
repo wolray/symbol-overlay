@@ -255,7 +255,7 @@ If SYMBOL is non-nil, get the overlays that belong to it.
 DIR is an integer.
 If EXCLUDE is non-nil, get all overlays excluding those belong to SYMBOL."
   (let ((overlays (cond ((= dir 0) (overlays-in (point-min) (point-max)))
-                        ((< dir 0) (overlays-in (point-min) (point)))
+                        ((< dir 0) (nreverse (overlays-in (point-min) (point))))
                         ((> dir 0) (overlays-in
                                     (if (looking-at-p "\\_>") (1- (point)) (point))
                                     (point-max))))))
