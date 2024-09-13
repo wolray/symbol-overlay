@@ -3,7 +3,7 @@
 ;; Copyright (C) 2017 wolray
 
 ;; Author: wolray <wolray@foxmail.com>
-;; Version: 4.2
+;; Version: 4.3
 ;; URL: https://github.com/wolray/symbol-overlay/
 ;; Keywords: faces, matching
 ;; Package-Requires: ((emacs "24.3") (seq "2.2"))
