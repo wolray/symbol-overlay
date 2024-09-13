@@ -249,6 +249,32 @@ You can re-bind the commands to any keys you prefer.")
     (remove-hook 'post-command-hook #'symbol-overlay-post-command t)
     (symbol-overlay-remove-temp)))
 
+(defvar symbol-overlay-nav-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\M-n" 'symbol-overlay-jump-next)
+    (define-key map "\M-p" 'symbol-overlay-jump-prev)
+    map)
+  "Keymap for `symbol-overlay-nav-mode'.")
+
+;;;###autoload
+(define-minor-mode symbol-overlay-nav-mode
+  "Navigate occurrences of the symbol at point.
+
+When called interactively, toggle `symbol-overlay-nav-mode'.
+With prefix ARG, enable `symbol-overlay-nav-mode' if ARG is
+positive, otherwise disable it.
+
+When called from Lisp, enable `symbol-overlay-nav-mode' if ARG
+is omitted, nil or positive.  If ARG is `toggle', toggle
+`symbol-overlay-nav-mode'.  Otherwise behave as if called
+interactively.
+
+In `symbol-overlay-nav-mode' provide the following key bindings
+to navigate between occurrences of the symbol at point in the
+current buffer.
+
+\\{symbol-overlay-nav-mode-map}")
+
 (defun symbol-overlay-get-list (dir &optional symbol exclude)
   "Get all highlighted overlays in the buffer.
 If SYMBOL is non-nil, get the overlays that belong to it.
